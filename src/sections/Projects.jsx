@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   FaGithub, FaExternalLinkAlt, FaStar, FaCodeBranch, 
-  FaSearch, FaInfoCircle, FaRegClock, FaBalanceScale 
+  FaInfoCircle, FaRegClock, FaBalanceScale 
 } from "react-icons/fa";
 import { fetchGitHubRepos } from "../services/githubService";
 import Skeleton from "../components/ui/Skeleton";
 
 export default function Projects() {
-  const [repos, setRepos] = useState([]);
+  const [originalProjects, setOriginalProjects] = useState([]);
+  const [filteredProjects, setFilteredProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("All");
 
   const loadData = async () => {
@@ -19,7 +19,8 @@ export default function Projects() {
     setError(null);
     try {
       const data = await fetchGitHubRepos();
-      setRepos(data);
+      setOriginalProjects(data);
+      setFilteredProjects(data);
     } catch (err) {
       setError("Failed to load projects from GitHub API. Please check your network connection or try again.");
     } finally {
@@ -31,26 +32,31 @@ export default function Projects() {
     loadData();
   }, []);
 
-  // Filter languages list
-  const uniqueLanguages = ["All", ...new Set(repos.map((r) => r.language).filter(Boolean))];
+  // Filter languages list from original dataset
+  const uniqueLanguages = useMemo(() => {
+    return ["All", ...new Set(originalProjects.map((r) => r.language).filter(Boolean))];
+  }, [originalProjects]);
 
-  // Filtering repositories based on search query and selected language
-  const filteredRepos = repos.filter((repo) => {
-    const matchesSearch = 
-      repo.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (repo.description && repo.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      repo.topics.some((topic) => topic.toLowerCase().includes(searchQuery.toLowerCase()));
+  // Filtering repositories based on selected language from original dataset
+  useEffect(() => {
+    if (selectedLanguage === "All") {
+      setFilteredProjects(originalProjects);
+      return;
+    }
 
-    const matchesLanguage = selectedLanguage === "All" || repo.language === selectedLanguage;
+    const filtered = originalProjects.filter((repo) => {
+      return repo.language === selectedLanguage;
+    });
 
-    return matchesSearch && matchesLanguage;
-  });
+    setFilteredProjects(filtered);
+  }, [selectedLanguage, originalProjects]);
 
   // Get color for language dot
   const getLanguageColor = (lang) => {
     switch (lang?.toLowerCase()) {
       case "python": return "bg-blue-500";
       case "javascript": return "bg-yellow-400";
+      case "react": return "bg-cyan-400";
       case "html": return "bg-orange-600";
       case "css": return "bg-purple-500";
       case "jupyter notebook": return "bg-orange-500";
@@ -105,29 +111,17 @@ export default function Projects() {
           />
         </div>
 
-        {/* Filters and Search Bar Row */}
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-12 max-w-5xl mx-auto">
-          {/* Search bar */}
-          <div className="relative w-full md:max-w-md">
-            <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search by repository name, keyword, topic..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 rounded-xl glass border border-white/5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-purple/50 focus:ring-1 focus:ring-brand-purple/20 transition-all duration-300"
-            />
-          </div>
-
+        {/* Filters Row */}
+        <div className="flex justify-center mb-12 max-w-5xl mx-auto">
           {/* Language filter tab */}
-          <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 scrollbar-none">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mr-2 flex-shrink-0 hidden sm:inline">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mr-2 flex-shrink-0">
               Language:
             </span>
             <select
               value={selectedLanguage}
               onChange={(e) => setSelectedLanguage(e.target.value)}
-              className="px-4 py-3 rounded-xl glass border border-white/5 text-sm text-slate-300 focus:outline-none focus:border-brand-purple/50 cursor-pointer"
+              className="px-4 py-3 rounded-xl glass border border-white/5 text-sm text-slate-350 focus:outline-none focus:border-brand-purple/50 cursor-pointer bg-bg-black min-w-[140px]"
             >
               {uniqueLanguages.map((lang) => (
                 <option key={lang} value={lang} className="bg-bg-black text-slate-350">
@@ -160,7 +154,7 @@ export default function Projects() {
               Retry Load
             </button>
           </motion.div>
-        ) : filteredRepos.length === 0 ? (
+        ) : filteredProjects.length === 0 ? (
           /* Premium Empty search state */
           <motion.div
             initial={{ opacity: 0 }}
@@ -182,10 +176,13 @@ export default function Projects() {
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
             <AnimatePresence>
-              {filteredRepos.map((repo) => (
+              {filteredProjects.map((repo) => (
                 <motion.div
                   key={repo.id}
                   variants={cardVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
                   whileHover={{ y: -6 }}
                   className="glass glow-card rounded-2xl p-6 flex flex-col justify-between border border-white/5 relative group cursor-pointer"
                   onClick={() => window.open(repo.htmlUrl, "_blank")}
