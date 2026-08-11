@@ -1,37 +1,91 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes, FaTasks } from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes, FaTasks, FaSearch, FaChevronLeft, FaChevronRight, FaSpinner } from "react-icons/fa";
+import * as taskService from "../services/taskService";
+import Toast from "../components/ui/Toast";
+
+const PRIORITY_OPTIONS = [
+  { value: "Low", label: "Low Priority" },
+  { value: "Medium", label: "Medium Priority" },
+  { value: "High", label: "High Priority" },
+];
+
+const getTaskId = (task) => task._id || task.id;
+
+const getPriorityClass = (priority = "Medium") => {
+  const normalized = priority.toLowerCase();
+  if (normalized === "high") {
+    return "bg-rose-500/20 text-rose-400 border border-rose-500/30";
+  }
+  if (normalized === "medium") {
+    return "bg-amber-500/20 text-amber-400 border border-amber-500/30";
+  }
+  return "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+};
 
 export default function TaskManager() {
-  const [tasks, setTasks] = useState([
-    {
-      id: "TASK-1001",
-      title: "Initialize Express Server",
-      description: "Setup base directory structure, install Express, configure request logging and cors middleware."
-    },
-    {
-      id: "TASK-1002",
-      title: "Design REST API Endpoints",
-      description: "Define router routes for CRUD operations on tasks with proper HTTP responses and status codes."
-    },
-    {
-      id: "TASK-1003",
-      title: "Implement Validation Middleware",
-      description: "Write custom Express middleware to validate content-type header and verify Task ID format."
-    },
-    {
-      id: "TASK-1004",
-      title: "Centralized Error Handling",
-      description: "Add a global error-handling middleware to catch server failures and return standard JSON outputs."
-    }
-  ]);
-
+  const [tasks, setTasks] = useState([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState("Medium");
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
 
-  const handleSubmit = (e) => {
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalTasks, setTotalTasks] = useState(0);
+  const [limit] = useState(5);
+
+  // Filter and search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterCompleted, setFilterCompleted] = useState("all"); // all, true, false
+  const [filterPriority, setFilterPriority] = useState("all"); // all, low, medium, high
+  const [sortBy, setSortBy] = useState("newest"); // newest, oldest, priority
+
+  // Fetch tasks from backend
+  const fetchTasks = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = {
+        page: currentPage,
+        limit,
+        sort: sortBy
+      };
+
+      if (searchQuery) params.search = searchQuery;
+      if (filterCompleted !== "all") params.completed = filterCompleted;
+      if (filterPriority !== "all") params.priority = filterPriority;
+
+      const response = await taskService.getTasks(params);
+      setTasks(response.tasks);
+      setTotalPages(response.totalPages);
+      setTotalTasks(response.totalTasks);
+    } catch (err) {
+      setError(err.message || "Unable to connect to task server.");
+      console.error("Fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load tasks on mount and when filters change
+  useEffect(() => {
+    fetchTasks();
+  }, [currentPage, searchQuery, filterCompleted, filterPriority, sortBy]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [searchQuery, filterCompleted, filterPriority, sortBy]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -40,51 +94,83 @@ export default function TaskManager() {
       return;
     }
 
-    if (!description.trim()) {
-      setError("Task description is required.");
-      return;
-    }
+    setSubmitting(true);
 
-    if (editingId) {
-      // Update task
-      setTasks(
-        tasks.map((task) =>
-          task.id === editingId
-            ? { ...task, title: title.trim(), description: description.trim() }
-            : task
-        )
-      );
-      setEditingId(null);
-    } else {
-      // Create new task
-      const nextNum = tasks.length > 0 
-        ? Math.max(...tasks.map(t => parseInt(t.id.split("-")[1]))) + 1 
-        : 1001;
-      const newTask = {
-        id: `TASK-${nextNum}`,
-        title: title.trim(),
-        description: description.trim()
-      };
-      setTasks([...tasks, newTask]);
-    }
+    try {
+      if (editingId) {
+        await taskService.updateTask(editingId, {
+          title: title.trim(),
+          description: description.trim(),
+          priority,
+        });
+        setEditingId(null);
+        setToast({ show: true, message: "Task updated successfully.", type: "success" });
+      } else {
+        await taskService.createTask({
+          title: title.trim(),
+          description: description.trim(),
+          priority,
+          completed: false,
+        });
+        setToast({ show: true, message: "Task added successfully.", type: "success" });
+      }
 
-    setTitle("");
-    setDescription("");
+      setTitle("");
+      setDescription("");
+      setPriority("Medium");
+
+      await fetchTasks();
+    } catch (err) {
+      setError(err.message || "Failed to save task");
+      console.error("Submit error:", err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleEdit = (task) => {
-    setEditingId(task.id);
+    setEditingId(getTaskId(task));
     setTitle(task.title);
-    setDescription(task.description);
+    setDescription(task.description || "");
+    setPriority(task.priority || "Medium");
     setError("");
   };
 
-  const handleDelete = (id) => {
-    setTasks(tasks.filter((task) => task.id !== id));
-    if (editingId === id) {
-      setEditingId(null);
-      setTitle("");
-      setDescription("");
+  const handleDelete = async (id) => {
+    if (!confirm("Are you sure you want to delete this task?")) return;
+
+    try {
+      await taskService.deleteTask(id);
+
+      if (tasks.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        await fetchTasks();
+      }
+
+      if (editingId === id) {
+        handleCancel();
+      }
+
+      setToast({ show: true, message: "Task deleted successfully.", type: "success" });
+    } catch (err) {
+      setError(err.message || "Failed to delete task");
+      console.error("Delete error:", err);
+    }
+  };
+
+  const handleToggleComplete = async (task) => {
+    try {
+      await taskService.toggleTaskComplete(getTaskId(task), !task.completed);
+      await fetchTasks();
+      setToast({
+        show: true,
+        message: task.completed ? "Task marked as pending." : "Task marked as completed.",
+        type: "success",
+      });
+    } catch (err) {
+      setError(err.message || "Failed to update task status");
+      console.error("Toggle complete error:", err);
     }
   };
 
@@ -92,7 +178,14 @@ export default function TaskManager() {
     setEditingId(null);
     setTitle("");
     setDescription("");
+    setPriority("Medium");
     setError("");
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
   };
 
   return (
@@ -152,6 +245,7 @@ export default function TaskManager() {
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g., Setup database connection"
                   className="w-full px-4 py-3 rounded-xl glass border border-white/5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-purple/50 focus:ring-1 focus:ring-brand-purple/20 transition-all duration-300"
+                  disabled={submitting}
                 />
               </div>
 
@@ -163,9 +257,28 @@ export default function TaskManager() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe the objective and requirements of this task..."
-                  rows="4"
+                  rows="3"
                   className="w-full px-4 py-3 rounded-xl glass border border-white/5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-purple/50 focus:ring-1 focus:ring-brand-purple/20 transition-all duration-300 resize-none"
+                  disabled={submitting}
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">
+                  Priority
+                </label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl glass border border-white/5 text-sm text-slate-200 focus:outline-none focus:border-brand-purple/50 focus:ring-1 focus:ring-brand-purple/20 transition-all duration-300"
+                  disabled={submitting}
+                >
+                  {PRIORITY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {error && (
@@ -179,16 +292,22 @@ export default function TaskManager() {
                   <button
                     type="button"
                     onClick={handleCancel}
-                    className="flex-1 py-2.5 rounded-xl font-bold text-xs tracking-wider glass border border-white/5 hover:border-slate-450 hover:bg-white/5 text-slate-350 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    disabled={submitting}
+                    className="flex-1 py-2.5 rounded-xl font-bold text-xs tracking-wider glass border border-white/5 hover:border-slate-450 hover:bg-white/5 text-slate-350 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Cancel
                   </button>
                 )}
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl font-bold text-xs tracking-wider bg-gradient-to-r from-brand-purple to-brand-magenta text-white text-center flex items-center justify-center gap-1.5 transition-all hover:opacity-95 shadow-lg shadow-brand-magenta/10 cursor-pointer"
+                  disabled={submitting}
+                  className="flex-1 py-2.5 rounded-xl font-bold text-xs tracking-wider bg-gradient-to-r from-brand-purple to-brand-magenta text-white text-center flex items-center justify-center gap-1.5 transition-all hover:opacity-95 shadow-lg shadow-brand-magenta/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {editingId ? (
+                  {submitting ? (
+                    <>
+                      <FaSpinner className="animate-spin" /> Saving...
+                    </>
+                  ) : editingId ? (
                     <>
                       <FaCheck /> Update Task
                     </>
@@ -209,82 +328,246 @@ export default function TaskManager() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="lg:col-span-8 glass rounded-2xl border border-white/5 overflow-hidden shadow-xl"
           >
-            <div className="p-5 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
-              <h3 className="font-bold text-slate-200">Active Task Queue</h3>
-              <span className="text-xs font-bold text-slate-450 bg-slate-900 border border-white/5 px-2.5 py-0.5 rounded-full">
-                {tasks.length} {tasks.length === 1 ? "Task" : "Tasks"}
-              </span>
+            {/* Header with Search and Filters */}
+            <div className="p-5 border-b border-white/5 bg-white/[0.01] space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h3 className="font-bold text-slate-200">Active Task Queue</h3>
+                <span className="text-xs font-bold text-slate-450 bg-slate-900 border border-white/5 px-2.5 py-0.5 rounded-full">
+                  {totalTasks} {totalTasks === 1 ? "Task" : "Tasks"}
+                </span>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative">
+                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search tasks by title or description..."
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl glass border border-white/5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-purple/50 focus:ring-1 focus:ring-brand-purple/20 transition-all duration-300"
+                />
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-wrap gap-3">
+                {/* Status Filter */}
+                <div className="flex-1 min-w-[140px]">
+                  <select
+                    value={filterCompleted}
+                    onChange={(e) => setFilterCompleted(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg glass border border-white/5 text-xs text-slate-300 focus:outline-none focus:border-brand-cyan/50 transition-all"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="false">Pending</option>
+                    <option value="true">Completed</option>
+                  </select>
+                </div>
+
+                {/* Priority Filter */}
+                <div className="flex-1 min-w-[140px]">
+                  <select
+                    value={filterPriority}
+                    onChange={(e) => setFilterPriority(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg glass border border-white/5 text-xs text-slate-300 focus:outline-none focus:border-brand-purple/50 transition-all"
+                  >
+                    <option value="all">All Priorities</option>
+                    <option value="High">High Priority</option>
+                    <option value="Medium">Medium Priority</option>
+                    <option value="Low">Low Priority</option>
+                  </select>
+                </div>
+
+                {/* Sort */}
+                <div className="flex-1 min-w-[140px]">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg glass border border-white/5 text-xs text-slate-300 focus:outline-none focus:border-brand-blue/50 transition-all"
+                  >
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="priority">By Priority</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-white/5 bg-white/[0.02]">
-                    <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 w-24">ID</th>
-                    <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 w-48">Title</th>
-                    <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400">Description</th>
-                    <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 text-center w-28">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <AnimatePresence initial={false}>
-                    {tasks.length === 0 ? (
-                      <motion.tr
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="border-b border-white/5 text-slate-500 font-semibold"
+            {/* Loading State */}
+            {loading && (
+              <div className="p-12 text-center">
+                <FaSpinner className="animate-spin text-brand-cyan text-3xl mx-auto mb-3" />
+                <p className="text-sm text-slate-400 font-semibold">Loading tasks...</p>
+              </div>
+            )}
+
+            {/* Error State */}
+            {!loading && error && (
+              <div className="p-8 text-center">
+                <div className="text-rose-400 bg-rose-500/10 border border-rose-500/20 px-4 py-3 rounded-xl inline-block">
+                  <p className="font-bold mb-1">⚠️ Error Loading Tasks</p>
+                  <p className="text-xs">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Tasks Table */}
+            {!loading && !error && (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-white/5 bg-white/[0.02]">
+                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 w-20">Status</th>
+                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 w-48">Title</th>
+                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400">Description</th>
+                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 w-24">Priority</th>
+                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 text-center w-28">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <AnimatePresence initial={false}>
+                        {tasks.length === 0 ? (
+                          <motion.tr
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="border-b border-white/5 text-slate-500 font-semibold"
+                          >
+                            <td colSpan="5" className="p-8 text-center text-sm">
+                              {searchQuery || filterCompleted !== "all" || filterPriority !== "all"
+                                ? "No tasks match your search or filters."
+                                : "No tasks yet."}
+                            </td>
+                          </motion.tr>
+                        ) : (
+                          tasks.map((task) => {
+                            const taskId = getTaskId(task);
+                            return (
+                            <motion.tr
+                              key={taskId}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0, scale: 0.95 }}
+                              transition={{ duration: 0.2 }}
+                              className="border-b border-white/5 hover:bg-white/[0.01] transition-colors"
+                            >
+                              <td className="p-4">
+                                <button
+                                  onClick={() => handleToggleComplete(task)}
+                                  className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
+                                    task.completed
+                                      ? "bg-brand-cyan border-brand-cyan text-white"
+                                      : "border-slate-600 hover:border-brand-cyan"
+                                  }`}
+                                  title={task.completed ? "Mark as pending" : "Mark as completed"}
+                                >
+                                  {task.completed && <FaCheck size={10} />}
+                                </button>
+                              </td>
+                              <td className={`p-4 text-sm font-extrabold break-words max-w-[12rem] ${
+                                task.completed ? "text-slate-500 line-through" : "text-slate-200"
+                              }`}>
+                                {task.title}
+                              </td>
+                              <td className={`p-4 text-xs leading-relaxed break-words max-w-sm ${
+                                task.completed ? "text-slate-600" : "text-slate-400"
+                              }`}>
+                                {task.description || "No description"}
+                              </td>
+                              <td className="p-4">
+                                <span className={`inline-block px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${getPriorityClass(task.priority)}`}>
+                                  {task.priority || "Medium"}
+                                </span>
+                              </td>
+                              <td className="p-4">
+                                <div className="flex items-center justify-center gap-2">
+                                  <button
+                                    onClick={() => handleEdit(task)}
+                                    title="Edit Task"
+                                    className="p-2 rounded-lg bg-slate-900 border border-white/5 hover:border-brand-purple/50 text-slate-400 hover:text-brand-purple transition-all text-xs cursor-pointer flex items-center justify-center"
+                                  >
+                                    <FaEdit size={12} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(taskId)}
+                                    title="Delete Task"
+                                    className="p-2 rounded-lg bg-slate-900 border border-white/5 hover:border-rose-500/50 text-slate-400 hover:text-rose-500 transition-all text-xs cursor-pointer flex items-center justify-center"
+                                  >
+                                    <FaTrash size={12} />
+                                  </button>
+                                </div>
+                              </td>
+                            </motion.tr>
+                          );
+                          })
+                        )}
+                      </AnimatePresence>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="p-4 border-t border-white/5 bg-white/[0.01] flex items-center justify-between flex-wrap gap-3">
+                    <div className="text-xs text-slate-400">
+                      Page {currentPage} of {totalPages}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1.5 rounded-lg glass border border-white/5 hover:border-brand-cyan/50 text-slate-400 hover:text-brand-cyan transition-all text-xs font-bold disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-white/5 disabled:hover:text-slate-400"
                       >
-                        <td colSpan="4" className="p-8 text-center text-sm">
-                          No active tasks in queue. Create one using the side panel!
-                        </td>
-                      </motion.tr>
-                    ) : (
-                      tasks.map((task) => (
-                        <motion.tr
-                          key={task.id}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          transition={{ duration: 0.2 }}
-                          className="border-b border-white/5 hover:bg-white/[0.01] transition-colors"
-                        >
-                          <td className="p-4 text-xs font-mono font-bold text-brand-cyan tracking-wide">
-                            {task.id}
-                          </td>
-                          <td className="p-4 text-sm font-extrabold text-slate-200 break-words max-w-[12rem]">
-                            {task.title}
-                          </td>
-                          <td className="p-4 text-xs text-slate-400 leading-relaxed break-words max-w-sm">
-                            {task.description}
-                          </td>
-                          <td className="p-4">
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() => handleEdit(task)}
-                                title="Edit Task"
-                                className="p-2 rounded-lg bg-slate-900 border border-white/5 hover:border-brand-purple/50 text-slate-400 hover:text-brand-purple transition-all text-xs cursor-pointer flex items-center justify-center"
-                              >
-                                <FaEdit size={12} />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(task.id)}
-                                title="Delete Task"
-                                className="p-2 rounded-lg bg-slate-900 border border-white/5 hover:border-rose-500/50 text-slate-400 hover:text-rose-500 transition-all text-xs cursor-pointer flex items-center justify-center"
-                              >
-                                <FaTrash size={12} />
-                              </button>
-                            </div>
-                          </td>
-                        </motion.tr>
-                      ))
-                    )}
-                  </AnimatePresence>
-                </tbody>
-              </table>
-            </div>
+                        <FaChevronLeft size={10} />
+                      </button>
+                      {[...Array(totalPages)].map((_, i) => {
+                        const pageNum = i + 1;
+                        // Show first, last, current, and neighbors
+                        if (
+                          pageNum === 1 ||
+                          pageNum === totalPages ||
+                          Math.abs(pageNum - currentPage) <= 1
+                        ) {
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => handlePageChange(pageNum)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                currentPage === pageNum
+                                  ? "bg-gradient-to-r from-brand-cyan to-brand-blue text-white"
+                                  : "glass border border-white/5 hover:border-brand-cyan/50 text-slate-400 hover:text-brand-cyan"
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        } else if (Math.abs(pageNum - currentPage) === 2) {
+                          return <span key={pageNum} className="text-slate-600">...</span>;
+                        }
+                        return null;
+                      })}
+                      <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1.5 rounded-lg glass border border-white/5 hover:border-brand-cyan/50 text-slate-400 hover:text-brand-cyan transition-all text-xs font-bold disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-white/5 disabled:hover:text-slate-400"
+                      >
+                        <FaChevronRight size={10} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </motion.div>
         </div>
       </div>
+
+      <Toast
+        show={toast.show}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+      />
     </section>
   );
 }
