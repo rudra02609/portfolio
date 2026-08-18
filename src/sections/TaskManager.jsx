@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes, FaTasks, FaSearch, FaChevronLeft, FaChevronRight, FaSpinner } from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes, FaTasks, FaSearch, FaChevronLeft, FaChevronRight, FaSpinner, FaFileDownload, FaFileExcel, FaFilePdf } from "react-icons/fa";
 import * as taskService from "../services/taskService";
 import Toast from "../components/ui/Toast";
 
@@ -185,6 +185,32 @@ export default function TaskManager() {
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
+    }
+  };
+
+  const handleDownloadExcel = async () => {
+    try {
+      setToast({ show: true, message: "Preparing Excel export...", type: "success" });
+      await taskService.exportTasksToExcel({
+        completed: filterCompleted,
+        priority: filterPriority,
+      });
+    } catch (err) {
+      setToast({ show: true, message: "Failed to export to Excel", type: "error" });
+      console.error("Export error:", err);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      setToast({ show: true, message: "Preparing PDF export...", type: "success" });
+      await taskService.exportTasksToPDF({
+        completed: filterCompleted,
+        priority: filterPriority,
+      });
+    } catch (err) {
+      setToast({ show: true, message: "Failed to export to PDF", type: "error" });
+      console.error("Export error:", err);
     }
   };
 
@@ -390,6 +416,26 @@ export default function TaskManager() {
                     <option value="priority">By Priority</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Download Buttons */}
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={handleDownloadExcel}
+                  disabled={loading || tasks.length === 0}
+                  className="flex-1 min-w-[120px] px-3 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold hover:bg-emerald-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                  title="Download tasks as Excel file with timestamp"
+                >
+                  <FaFileExcel /> Export Excel
+                </button>
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={loading || tasks.length === 0}
+                  className="flex-1 min-w-[120px] px-3 py-2 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-400 text-xs font-bold hover:bg-rose-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                  title="Download tasks as PDF file with timestamp"
+                >
+                  <FaFilePdf /> Export PDF
+                </button>
               </div>
             </div>
 

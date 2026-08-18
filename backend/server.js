@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
 const taskRoutes = require("./routes/taskRoutes");
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -50,6 +51,7 @@ app.get("/health", (req, res) => {
 });
 
 // API Routes
+app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
 
 // 404 Handler

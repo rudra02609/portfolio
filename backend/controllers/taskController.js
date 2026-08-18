@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const Task = require("../models/Task");
+const XLSX = require("xlsx");
+const PDFDocument = require("pdfkit");
 
 const VALID_PRIORITIES = ["Low", "Medium", "High"];
 
@@ -339,6 +341,157 @@ const deleteTask = async (req, res) => {
   }
 };
 
+// @desc    Export tasks to Excel
+// @route   GET /api/tasks/export/excel
+const exportTasksToExcel = async (req, res) => {
+  try {
+    const { completed, priority } = req.query;
+
+    const filter = {};
+
+    if (completed !== undefined && completed !== "all") {
+      filter.completed = completed === "true";
+    }
+
+    if (priority && priority !== "all") {
+      const normalizedPriority = normalizePriority(priority);
+      if (normalizedPriority) {
+        filter.priority = normalizedPriority;
+      }
+    }
+
+    const tasks = await Task.find(filter).select("-__v");
+
+    // Format data for Excel
+    const data = tasks.map((task) => ({
+      "Task ID": task._id.toString(),
+      Title: task.title,
+      Description: task.description,
+      Priority: task.priority,
+      Status: task.completed ? "Completed" : "Pending",
+      "Created At": new Date(task.createdAt).toLocaleString(),
+      "Updated At": new Date(task.updatedAt).toLocaleString(),
+    }));
+
+    // Create workbook and sheet
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(data);
+
+    // Add column widths for better formatting
+    const colWidths = [25, 20, 30, 12, 12, 20, 20];
+    worksheet["!cols"] = colWidths.map((width) => ({ wch: width }));
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Tasks");
+
+    // Generate buffer
+    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "buffer" });
+
+    // Set headers and send
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-").split("T")[0];
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="tasks_export_${timestamp}.xlsx"`
+    );
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.send(buffer);
+  } catch (error) {
+    console.error("Error exporting tasks to Excel:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to export tasks to Excel",
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Export tasks to PDF
+// @route   GET /api/tasks/export/pdf
+const exportTasksToPDF = async (req, res) => {
+  try {
+    const { completed, priority } = req.query;
+
+    const filter = {};
+
+    if (completed !== undefined && completed !== "all") {
+      filter.completed = completed === "true";
+    }
+
+    if (priority && priority !== "all") {
+      const normalizedPriority = normalizePriority(priority);
+      if (normalizedPriority) {
+        filter.priority = normalizedPriority;
+      }
+    }
+
+    const tasks = await Task.find(filter).select("-__v");
+
+    // Create PDF document
+    const doc = new PDFDocument({ margin: 50 });
+
+    // Set response headers
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-").split("T")[0];
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="tasks_export_${timestamp}.pdf"`
+    );
+    res.setHeader("Content-Type", "application/pdf");
+
+    // Pipe to response
+    doc.pipe(res);
+
+    // Add title
+    doc.fontSize(20).font("Helvetica-Bold").text("Task Management Export", { align: "center" });
+
+    // Add timestamp
+    doc.fontSize(10).font("Helvetica").text(
+      `Export Date: ${new Date().toLocaleString()}`,
+      { align: "center" }
+    );
+
+    doc.moveDown();
+
+    // Add summary
+    const completedCount = tasks.filter((t) => t.completed).length;
+    doc.fontSize(11).font("Helvetica-Bold").text(`Total Tasks: ${tasks.length}`);
+    doc.fontSize(11).text(`Completed: ${completedCount}`);
+    doc.fontSize(11).text(`Pending: ${tasks.length - completedCount}`);
+
+    doc.moveDown();
+
+    // Add tasks table
+    if (tasks.length > 0) {
+      doc.fontSize(12).font("Helvetica-Bold").text("Tasks List", { underline: true });
+      doc.moveDown(0.5);
+
+      tasks.forEach((task, index) => {
+        doc.fontSize(10).font("Helvetica-Bold").text(`${index + 1}. ${task.title}`);
+        doc.fontSize(9).font("Helvetica").text(`   Description: ${task.description || "N/A"}`);
+        doc.fontSize(9).text(`   Priority: ${task.priority}`);
+        doc.fontSize(9).text(`   Status: ${task.completed ? "✓ Completed" : "○ Pending"}`);
+        doc.fontSize(8).text(`   Created: ${new Date(task.createdAt).toLocaleString()}`, {
+          color: "#666666",
+        });
+        doc.moveDown(0.5);
+      });
+    } else {
+      doc.fontSize(11).text("No tasks found.", { color: "#999999" });
+    }
+
+    // Finalize PDF
+    doc.end();
+  } catch (error) {
+    console.error("Error exporting tasks to PDF:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to export tasks to PDF",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getTasks,
   getTaskById,
@@ -346,4 +499,6 @@ module.exports = {
   updateTask,
   toggleTaskComplete,
   deleteTask,
+  exportTasksToExcel,
+  exportTasksToPDF,
 };

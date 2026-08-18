@@ -108,3 +108,42 @@ export const deleteTask = async (id) => {
     throw error;
   }
 };
+
+export const exportTasksToExcel = async (params = {}) => {
+  try {
+    const queryParams = new URLSearchParams();
+
+    if (params.completed !== undefined && params.completed !== "all") {
+      queryParams.append("completed", params.completed);
+    }
+    if (params.priority && params.priority !== "all") {
+      queryParams.append("priority", params.priority);
+    }
+
+    const url = `${buildUrl("/tasks/export/excel")}?${queryParams.toString()}`;
+    window.location.href = url;
+  } catch (error) {
+    console.error("Error exporting tasks to Excel:", error);
+    throw error;
+  }
+};
+
+export const exportTasksToPDF = async (params = {}) => {
+  try {
+    const queryParams = new URLSearchParams();
+
+    if (params.completed !== undefined && params.completed !== "all") {
+      queryParams.append("completed", params.completed);
+    }
+    if (params.priority && params.priority !== "all") {
+      queryParams.append("priority", params.priority);
+    }
+
+    const url = `${buildUrl("/tasks/export/pdf")}?${queryParams.toString()}`;
+    window.location.href = url;
+  } catch (error) {
+    console.error("Error exporting tasks to PDF:", error);
+    throw error;
+  }
+};
+
