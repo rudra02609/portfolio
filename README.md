@@ -1,59 +1,97 @@
+<div align="center">
+
 # Rudra Prajapati — Portfolio
 
-Personal portfolio built with **React 19**, **Vite**, **Tailwind CSS v4**, and a dark,
-glassmorphism design system with mouse-scrubbed background video, custom cursor,
-scroll-animated sections, and responsive layout.
+### Full-Stack Developer Portfolio
 
-## Structure
+![React](https://img.shields.io/badge/React_19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite_6-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
 
-```text
-├── frontend (this root)
-│   ├── src/
-│   │   ├── components/     # Navbar, Hero, sections, effects
-│   │   ├── constants/      # portfolioData.ts — central content
-│   │   ├── context/        # AuthContext, ToastContext
-│   │   ├── hooks/          # useScrollSpy, useTypewriter
-│   │   └── services/       # github, task, auth, contact service layers
-│   └── public/
-└── backend/                # Express + MongoDB (auth, tasks)
+<br/>
+
+**A sleek, dark-themed portfolio featuring glassmorphism UI, mouse-scrubbed video backgrounds, custom cursor, scroll-animated sections, and a fully responsive layout.**
+
+</div>
+
+---
+
+## ✨ Features
+
+| Feature | Description |
+|---------|-------------|
+| 🎨 **Glassmorphism Design** | Frosted glass cards with backdrop-blur and subtle borders |
+| 🖱️ **Mouse-Scrubbed Video** | Background video that follows your cursor |
+| 🔮 **Custom Cursor** | Animated, interactive cursor effect |
+| 📜 **Scroll Animations** | Sections animate in as you scroll using Framer Motion |
+| 🌙 **Dark Theme** | Full dark mode with carefully crafted color palette |
+| 📱 **Fully Responsive** | Looks great on desktop, tablet, and mobile |
+| 🔐 **Auth System** | Sign In / Create Account with JWT + MongoDB |
+| 📬 **Contact Form** | Integrated EmailJS for direct messaging |
+
+---
+
+## 🗂️ Project Structure
+
+```
+portfolio/
+├── 📂 src/
+│   ├── components/     → Navbar, Hero, Sections, Effects
+│   ├── constants/      → portfolioData.ts (central content)
+│   ├── context/        → AuthContext, ToastContext
+│   ├── hooks/          → useScrollSpy, useTypewriter
+│   └── services/       → github, task, auth, contact service layers
+├── 📂 public/
+└── 📂 backend/                → Express + MongoDB
     ├── routes/
     ├── models/
     ├── middleware/
     └── server.js
 ```
 
-## Run Locally (frontend)
+---
 
-1. `npm install`
-2. Copy `.env.example` to `.env` and fill in real values (optional for local dev).
-3. `npm run dev` — serves on http://localhost:3000
+## 🚀 Quick Start
 
-## Run Backend (optional but required for Sign In / Create Account)
-
-Sign In and Create Account need the backend + MongoDB running. Run both in one
-command from the project root:
+### Frontend Only
 
 ```bash
-npm run dev:all   # starts frontend (3000) + backend (5000) together
+npm install
+cp .env.example .env      # fill in values (optional for local dev)
+npm run dev               # http://localhost:3000
 ```
 
-Or run them separately:
+### Full Stack (Frontend + Backend)
 
 ```bash
-npm run dev:frontend   # terminal 1
-npm run dev:backend    # terminal 2 (requires MongoDB on 27017)
+npm run dev:all           # Frontend (3000) + Backend (5000)
 ```
 
-Set backend secrets in `backend/.env` (copy from `backend/.env.example`) —
-`MONGODB_URI` and `JWT_SECRET` at minimum. Never commit real secrets.
-
-> Note: `npm run dev` alone starts only the frontend, so Sign In / Create
-> Account will report "Unable to connect to the server" — use `dev:all` (or start
-> the backend) for full authentication.
-
-## Build
+Or run separately:
 
 ```bash
-npm run build   # frontend production build
-npm run lint    # tsc --noEmit type check
+npm run dev:frontend      # Terminal 1
+npm run dev:backend       # Terminal 2 (requires MongoDB on 27017)
 ```
+
+> **Note:** Backend secrets go in `backend/.env` — copy from `backend/.env.example`. At minimum, set `MONGODB_URI` and `JWT_SECRET`. Never commit real secrets.
+
+---
+
+## 🛠️ Build & Lint
+
+```bash
+npm run build             # Production build
+npm run lint              # TypeScript type check
+```
+
+---
+
+<div align="center">
+
+**Built with care by [Rudra Prajapati](https://github.com/rudra0710)**
+
+</div>
