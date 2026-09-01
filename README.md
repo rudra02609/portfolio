@@ -18,7 +18,7 @@
 </div>
 
 --- 
-https://github.com/user-attachments/assets/ffa87a25-5e70-4177-b393-40422efd83e4
+https://github.com/user-attachments/assets/2fe2db2c-824e-4a44-98fe-114ff9cb3389
 
 
 ## ✨ Features
