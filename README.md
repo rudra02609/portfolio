@@ -18,7 +18,7 @@
 </div>
 
 --- 
-https://github.com/user-attachments/assets/2fe2db2c-824e-4a44-98fe-114ff9cb3389
+<img width="1912" height="907" alt="Image" src="https://github.com/user-attachments/assets/0beee4d3-771f-4ca4-b53a-e57a0a6cadb4" />
 
 
 ## ✨ Features
