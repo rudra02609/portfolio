@@ -1,0 +1,215 @@
+@import "tailwindcss";
+
+/* ============================================
+   FONT VARIABLES — HelveticaNow (DO NOT CHANGE)
+   This is the design system's font.
+   ============================================ */
+:root {
+  --font-heading: 'HelveticaNowDisplay-Medium', 'Helvetica Neue', Arial, sans-serif;
+  --font-body: 'HelveticaNowDisplayW01-Rg', 'Helvetica Neue', Arial, sans-serif;
+
+  /* Brand Colors */
+  --color-bg-black: #000000;
+  --color-bg-dark: #0a0a10;
+  --color-bg-card: rgba(10, 10, 18, 0.55);
+  --color-brand-cyan: #06b6d4;
+  --color-brand-blue: #3b82f6;
+  --color-brand-purple: #a855f7;
+  --color-brand-magenta: #ec4899;
+}
+
+/* ============================================
+   BASE
+   ============================================ */
+html {
+  scroll-behavior: smooth;
+  cursor: none; /* Custom cursor on desktop */
+}
+
+@media (max-width: 1024px) {
+  html {
+    cursor: auto; /* Native cursor on mobile/tablet */
+  }
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: #000000;
+  color: #ffffff;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* ============================================
+   CUSTOM SCROLLBAR
+   ============================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #040408;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.5);
+}
+
+/* ============================================
+   SELECTION
+   ============================================ */
+::selection {
+  background: rgba(168, 85, 247, 0.3);
+  color: #ffffff;
+}
+
+/* ============================================
+   GLASSMORPHISM UTILITIES
+   ============================================ */
+.glass {
+  background: rgba(10, 10, 18, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-nav {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glow-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glow-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0 24px rgba(6, 182, 212, 0.08), 0 0 40px rgba(59, 130, 246, 0.05);
+}
+
+/* ============================================
+   GRADIENT TEXT UTILITIES
+   ============================================ */
+.text-gradient {
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-cyan-blue {
+  background-image: linear-gradient(135deg, #22d3ee, #3b82f6);
+}
+
+.text-gradient-blue-purple {
+  background-image: linear-gradient(135deg, #3b82f6, #a855f7);
+}
+
+.text-gradient-purple-pink {
+  background-image: linear-gradient(135deg, #a855f7, #ec4899);
+}
+
+.text-gradient-brand {
+  background-image: linear-gradient(135deg, #06b6d4, #3b82f6, #a855f7);
+}
+
+/* ============================================
+   CUSTOM CURSOR
+   ============================================ */
+.cursor-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  position: fixed;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 9999;
+  transition: width 0.2s, height 0.2s, background-color 0.2s;
+}
+
+.cursor-ring {
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  position: fixed;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 9998;
+  transition: width 0.2s, height 0.2s, border-color 0.2s;
+}
+
+.cursor-hover .cursor-dot {
+  width: 12px;
+  height: 12px;
+  background-color: #a855f7;
+}
+
+.cursor-hover .cursor-ring {
+  width: 52px;
+  height: 52px;
+  border-color: rgba(168, 85, 247, 0.6);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================
+   SECTION STYLING
+   ============================================ */
+.section-border {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ============================================
+   FORM INPUTS — portfolio sections
+   ============================================ */
+.portfolio-input {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  font-family: var(--font-body);
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.portfolio-input:focus {
+  border-color: rgba(168, 85, 247, 0.5);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.portfolio-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
