@@ -17,7 +17,9 @@
 
 </div>
 
----
+--- 
+<img width="1907" height="907" alt="Screenshot 2026-09-01 123734" src="https://github.com/user-attachments/assets/5ea246fb-821a-4c8d-a3c5-f0dc9134d63f" />
+
 
 ## ✨ Features
 
