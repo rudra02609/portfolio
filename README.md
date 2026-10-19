@@ -94,6 +94,6 @@ npm run lint              # TypeScript type check
 
 <div align="center">
 
-**Built with care by [Rudra Prajapati](https://github.com/rudra0710)**
+**Built with care by [Rudra Prajapati](https://github.com/rudra02609)**
 
 </div>
