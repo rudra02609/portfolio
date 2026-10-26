@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const Task = require('../models/Task');
 const auth = require('../middleware/auth');
 const cache = require('../utils/cache');
-const groqService = require('../services/groqService');
+const geminiService = require('../services/geminiService');
 
 const router = express.Router();
 router.use(auth);
@@ -180,7 +180,7 @@ router.post('/:id/ai-insight', async (req, res) => {
     }
 
     // Get AI insight
-    const insight = await groqService.getAIInsight({
+    const insight = await geminiService.getAIInsight({
       title: task.title,
       description: task.description,
       completed: task.completed,
