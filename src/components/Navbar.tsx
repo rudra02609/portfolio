@@ -1,23 +1,45 @@
-import React, { useState } from 'react';
-import { useScrollSpy } from '../hooks/useScrollSpy';
-import { profile } from '../constants/portfolioData';
+import React, { useEffect, useState } from 'react';
 
 const NAV_LINKS = [
   { label: 'About', id: 'about' },
   { label: 'Skills', id: 'skills' },
   { label: 'Projects', id: 'projects' },
   { label: 'Timeline', id: 'timeline' },
+  { label: 'Certificates', id: 'certificates' },
   { label: 'Tasks', id: 'tasks' },
   { label: 'Contact', id: 'contact' },
 ];
 
-const SECTION_IDS = NAV_LINKS.map((l) => l.id);
+interface NavbarProps {
+  activeSection: string;
+  onNavigate: (section: string) => void;
+}
 
-export const Navbar: React.FC = () => {
+function formatTime(date: Date): string {
+  let hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+  return `${hours}:${minutes} ${ampm}`;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ activeSection, onNavigate }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const activeId = useScrollSpy(SECTION_IDS, 160);
+  const [now, setNow] = useState<Date>(() => new Date());
+
+  // Live clock — updates every second using the user's local browser time.
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const toggleMobileMenu = () => setMobileMenuOpen((prev) => !prev);
+
+  const handleNavigate = (section: string) => {
+    onNavigate(section);
+    setMobileMenuOpen(false);
+  };
 
   return (
     <>
@@ -26,20 +48,19 @@ export const Navbar: React.FC = () => {
         className="fixed top-0 left-0 right-0 z-50 w-full glass-nav px-5 sm:px-8 py-4 flex justify-between items-center select-none"
       >
         {/* Logo (left) */}
-        <a href="#hero" className="flex items-center gap-2 cursor-pointer">
+        <button
+          type="button"
+          onClick={() => handleNavigate('hero')}
+          aria-label="Go to home"
+          className="flex items-center gap-2 cursor-pointer bg-transparent border-0 p-0"
+        >
           <span
-            className="text-[16px] sm:text-[19px] tracking-tight text-white"
+            className="text-[16px] sm:text-[19px] tracking-tight text-white whitespace-nowrap"
             style={{ fontFamily: 'var(--font-heading)' }}
           >
-            {profile.name}
+            My Portfolio
           </span>
-          <span
-            className="text-[18px] text-white select-none inline-block leading-none"
-            aria-hidden="true"
-          >
-            ✳︎
-          </span>
-        </a>
+        </button>
 
         {/* Desktop nav links (center, hidden below lg) */}
         <nav
@@ -49,14 +70,17 @@ export const Navbar: React.FC = () => {
         >
           {NAV_LINKS.map((link, index) => (
             <React.Fragment key={link.id}>
-              <a
-                href={`#${link.id}`}
-                className={`transition-colors cursor-pointer ${
-                  activeId === link.id ? 'text-white' : 'hover:text-white'
-                }`.trim()}
+              <button
+                type="button"
+                onClick={() => handleNavigate(link.id)}
+                className={`bg-transparent border-0 p-0 text-[14px] sm:text-[15px] transition-colors cursor-pointer ${
+                  activeSection === link.id
+                    ? 'text-white'
+                    : 'text-white/70 hover:text-white'
+                }`}
               >
                 {link.label}
-              </a>
+              </button>
               {index < NAV_LINKS.length - 1 && (
                 <span className="text-white/25 select-none whitespace-pre mx-2">/</span>
               )}
@@ -64,15 +88,9 @@ export const Navbar: React.FC = () => {
           ))}
         </nav>
 
-        {/* Desktop CTA (right, hidden below lg) */}
-        <div className="hidden lg:block">
-          <a
-            id="desktop-cta"
-            href="#contact"
-            className="text-[15px] text-white underline underline-offset-4 hover:opacity-60 transition-opacity cursor-pointer"
-          >
-            Get in touch
-          </a>
+        {/* Current time (right, hidden below lg) */}
+        <div className="hidden lg:block text-[14px] sm:text-[15px] text-white/70 whitespace-nowrap">
+          {formatTime(now)}
         </div>
 
         {/* Mobile hamburger button (visible below lg) */}
@@ -112,24 +130,20 @@ export const Navbar: React.FC = () => {
       >
         {NAV_LINKS.map((link) => (
           <div key={link.id} className="flex items-center gap-3">
-            <a
-              href={`#${link.id}`}
-              onClick={() => setMobileMenuOpen(false)}
-              className={`text-[28px] font-medium transition-colors ${
-                activeId === link.id ? 'text-white' : 'text-white/60'
+            <button
+              type="button"
+              onClick={() => handleNavigate(link.id)}
+              className={`bg-transparent border-0 p-0 text-[28px] font-medium transition-colors cursor-pointer ${
+                activeSection === link.id
+                  ? 'text-white'
+                  : 'text-white/60 hover:text-white'
               }`}
             >
               {link.label}
-            </a>
+            </button>
           </div>
         ))}
-        <a
-          href="#contact"
-          onClick={() => setMobileMenuOpen(false)}
-          className="text-[28px] font-medium text-white underline underline-offset-4 transition-opacity"
-        >
-          Get in touch
-        </a>
+        <div className="text-white/40 text-[16px] mt-2">{formatTime(now)}</div>
       </div>
     </>
   );
