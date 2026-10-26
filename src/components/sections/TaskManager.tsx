@@ -38,6 +38,9 @@ export const TaskManager: React.FC = () => {
   const [editing, setEditing] = useState<Task | null>(null);
   const [form, setForm] = useState({ title: '', description: '', priority: 'Low' as Task['priority'] });
   const [saving, setSaving] = useState(false);
+  const [aiInsight, setAiInsight] = useState(null);
+  const [aiInsightOpen, setAiInsightOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const loadTasks = useCallback(
     async (p = page) => {
@@ -133,6 +136,27 @@ export const TaskManager: React.FC = () => {
       await loadTasks(page);
     } catch (e: unknown) {
       toast(e instanceof Error ? e.message : 'Failed to delete task.', 'error');
+    }
+  };
+
+  const handleAiInsight = async (taskId: string) => {
+    setAiLoading(true);
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/ai-insight`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(localStorage.getItem('authToken') ? { Authorization: `Bearer ${localStorage.getItem('authToken')}` } : {}),
+        },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'AI Insight failed');
+      setAiInsight(data.insight);
+      setAiInsightOpen(true);
+    } catch (e: unknown) {
+      toast(e instanceof Error ? e.message : 'AI Insight is temporarily unavailable. Please try again.', 'error');
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -271,6 +295,14 @@ export const TaskManager: React.FC = () => {
                   </button>
                   <button
                     type="button"
+                    onClick={() => handleAiInsight(task.id)}
+                    className="text-white/50 hover:text-white text-[13px] transition-colors cursor-pointer"
+                    aria-label="AI Insight"
+                  >
+                    ✨ AI Insight
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleDelete(task)}
                     className="text-red-300/80 hover:text-red-300 text-[13px] transition-colors cursor-pointer"
                     aria-label="Delete task"
@@ -388,6 +420,104 @@ export const TaskManager: React.FC = () => {
           </div>
         </div>
       )}
+    
+    {/* AI Insight Modal */}
+    {aiInsightOpen && (
+      <div
+        className="fixed inset-0 z-[95] bg-black/80 backdrop-blur-sm flex items-center justify-center px-5"
+        onClick={() => setAiInsightOpen(false)}
+      >
+        <div
+          className="glass rounded-3xl p-6 sm:p-8 w-full max-w-md max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h3
+            className="text-white text-[20px] mb-4"
+            style={{ fontFamily: 'var(--font-heading)' }}
+          >
+            ✨ AI Insight
+          </h3>
+          
+          {aiLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="w-10 h-10 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+              <span className="text-white/50 ml-3">Analyzing...</span>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-white/70 text-[13px]">{aiInsight.summary}</p>
+              
+              <h4 className="text-white/50 text-[13px] mb-2">How to Complete</h4>
+              <ol className="list-decimal list-inside space-y-1">
+                {aiInsight.completionPlan.map((step, i) => (
+                  <li
+                    key={i}
+                    className="text-white/70 text-[13px] leading-relaxed"
+                  >
+                    {step}
+                  </li>
+                ))}
+              </ol>
+              
+              {aiInsight.completed && aiInsight.completed.length > 0 && (
+                <div>
+                  <h4 className="text-white/50 text-[13px] mb-2">Completed</h4>
+                  <ul className="list-disc list-inside space-y-1">
+                    {aiInsight.completed.map((item, i) => (
+                      <li key={i} className="text-white/70 text-[13px]">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {aiInsight.remaining && aiInsight.remaining.length > 0 && (
+                <div>
+                  <h4 className="text-white/50 text-[13px] mb-2">Remaining</h4>
+                  <ul className="list-disc list-inside space-y-1">
+                    {aiInsight.remaining.map((item, i) => (
+                      <li key={i} className="text-white/70 text-[13px]">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {aiInsight.blockers && aiInsight.blockers.length > 0 && (
+                <div>
+                  <h4 className="text-white/50 text-[13px] mb-2">Possible Blockers</h4>
+                  <ul className="list-disc list-inside space-y-1">
+                    {aiInsight.blockers.map((item, i) => (
+                      <li key={i} className="text-white/70 text-[13px]">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              <div>
+                <h4 className="text-white/50 text-[13px] mb-2">Recommended Next Action</h4>
+                <p className="text-white text-[14px] leading-relaxed">{aiInsight.recommendation}</p>
+              </div>
+            </div>
+          )}
+          
+          <div className="mt-6 flex gap-3">
+            <button
+              type="button"
+              onClick={() => setAiInsightOpen(false)}
+              className="flex-1 rounded-xl px-4 py-2.5 text-[14px] border border-white/20 text-white/70 hover:text-white transition-colors cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    
     </section>
   );
 };
