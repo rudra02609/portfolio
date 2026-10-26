@@ -120,6 +120,11 @@ export const Projects: React.FC = () => {
                     style={{ fontFamily: 'var(--font-heading)' }}
                   >
                     {repo.name}
+                    {repo.isFork && (
+                      <span className="ml-2 inline-block text-[10px] text-amber-300/80 bg-amber-300/10 border border-amber-300/20 rounded-full px-1.5 py-0 align-middle">
+                        Forked
+                      </span>
+                    )}
                   </h3>
                   <span className="text-white/40 group-hover:text-white transition-colors shrink-0">
                     <ExternalLinkIcon />
