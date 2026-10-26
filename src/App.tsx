@@ -11,6 +11,7 @@ import { Skills } from './components/sections/Skills';
 import { Projects } from './components/sections/Projects';
 import { Timeline } from './components/sections/Timeline';
 import { TaskManager } from './components/sections/TaskManager';
+import { Certificates } from './components/sections/Certificates';
 import { Contact } from './components/sections/Contact';
 import { Footer } from './components/sections/Footer';
 
@@ -51,6 +52,7 @@ export default function App() {
       <Skills />
       <Projects />
       <Timeline />
+      <Certificates />
       <TaskManager />
       <Contact />
       <Footer />
