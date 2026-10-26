@@ -17,6 +17,7 @@ interface AuthContextType {
   error: string | null;
   isAuthenticated: boolean;
   isLoadingGate: boolean;
+  guest: boolean;
   loginWithGoogle: (credential: string) => Promise<void>;
   handleLogout: () => void;
 }
@@ -99,6 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         error,
         isAuthenticated,
         isLoadingGate: initializing,
+        guest: false,
         loginWithGoogle,
         handleLogout,
       }}
