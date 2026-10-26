@@ -1,14 +1,27 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Task = require('../models/Task');
 const auth = require('../middleware/auth');
+const cache = require('../utils/cache');
+const groqService = require('../services/groqService');
 
 const router = express.Router();
 router.use(auth);
 
-// Build a scoped query for the authenticated user (or guest id)
+// Scoped query for the authenticated user (or guest id)
 function scopeFor(req) {
   if (req.user && req.user.id) return { user: req.user.id };
   return { guestId: req.body.guestId || req.query.guestId || 'default' };
+}
+
+// Validate that an id is a real MongoDB ObjectId before it reaches a query,
+// so malformed values like "undefined" never hit Task.findOne etc.
+function validId(req, res) {
+  if (!req.params.id || !mongoose.isValidObjectId(req.params.id)) {
+    res.status(400).json({ message: 'Invalid task id.' });
+    return false;
+  }
+  return true;
 }
 
 // GET /api/tasks — list with search, filters, pagination
@@ -18,6 +31,15 @@ router.get('/', async (req, res) => {
     const limit = parseInt(req.query.limit) || 6;
     const search = (req.query.search || '').trim();
     const { completed, priority } = req.query;
+
+    const cacheKey = `tasks_${req.user.id}`;
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      console.log('[CACHE HIT]', cacheKey);
+      return res.json(cached);
+    }
+
+    console.log('[CACHE MISS]', cacheKey);
 
     const query = scopeFor(req);
     if (completed !== undefined && completed !== 'all') query.completed = completed === 'true';
@@ -33,7 +55,13 @@ router.get('/', async (req, res) => {
       .skip((page - 1) * limit)
       .limit(limit);
 
-    res.json({ tasks, total, page, totalPages });
+    const response = { tasks, total, page, totalPages };
+
+    // Store in cache (only the essential data, not pagination metadata from DB)
+    const cacheData = { tasks, total, page, totalPages };
+    cache.set(cacheKey, cacheData);
+
+    res.json(response);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -42,6 +70,7 @@ router.get('/', async (req, res) => {
 // GET /api/tasks/:id
 router.get('/:id', async (req, res) => {
   try {
+    if (!validId(req, res)) return;
     const task = await Task.findOne({ _id: req.params.id, ...scopeFor(req) });
     if (!task) return res.status(404).json({ message: 'Task not found.' });
     res.json({ task });
@@ -65,6 +94,9 @@ router.post('/', async (req, res) => {
       priority,
     });
     res.status(201).json({ task });
+
+    // Invalidate user's task cache after successful creation
+    cache.del(`tasks_${req.user.id}`);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -81,6 +113,7 @@ router.put('/:id', async (req, res) => {
     if (description !== undefined) update.description = description;
     if (priority !== undefined) update.priority = priority;
 
+    if (!validId(req, res)) return;
     const task = await Task.findOneAndUpdate(
       { _id: req.params.id, ...scopeFor(req) },
       update,
@@ -88,6 +121,9 @@ router.put('/:id', async (req, res) => {
     );
     if (!task) return res.status(404).json({ message: 'Task not found.' });
     res.json({ task });
+
+    // Invalidate user's task cache after successful update
+    cache.del(`tasks_${req.user.id}`);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -96,6 +132,7 @@ router.put('/:id', async (req, res) => {
 // PATCH /api/tasks/:id/complete
 router.patch('/:id/complete', async (req, res) => {
   try {
+    if (!validId(req, res)) return;
     const task = await Task.findOneAndUpdate(
       { _id: req.params.id, ...scopeFor(req) },
       { completed: req.body.completed },
@@ -111,11 +148,56 @@ router.patch('/:id/complete', async (req, res) => {
 // DELETE /api/tasks/:id
 router.delete('/:id', async (req, res) => {
   try {
+    if (!validId(req, res)) return;
     const task = await Task.findOneAndDelete({ _id: req.params.id, ...scopeFor(req) });
     if (!task) return res.status(404).json({ message: 'Task not found.' });
     res.json({ message: 'Task deleted.' });
+
+    // Invalidate user's task cache after successful deletion
+    cache.del(`tasks_${req.user.id}`);
   } catch (err) {
     res.status(400).json({ message: err.message });
+  }
+});
+
+// POST /api/tasks/:id/ai-insight
+router.post('/:id/ai-insight', async (req, res) => {
+  try {
+    // Authentication is already enforced by router.use(auth)
+
+    // Validate task ID
+    if (!validId(req, res)) return;
+
+    // Find task belonging to the authenticated user
+    const task = await Task.findOne({
+      _id: req.params.id,
+      ...scopeFor(req),
+    });
+
+    if (!task) {
+      // Task not found or doesn't belong to this user
+      return res.status(404).json({ message: 'Task not found.' });
+    }
+
+    // Get AI insight
+    const insight = await groqService.getAIInsight({
+      title: task.title,
+      description: task.description,
+      completed: task.completed,
+      priority: task.priority,
+    });
+
+    res.json({
+      success: true,
+      insight,
+    });
+  } catch (err) {
+    console.error('[ai-insight] Error:', err.message);
+    const status = err.status || 500;
+    res.status(status).json({
+      success: false,
+      message: err.message || 'AI insight is temporarily unavailable. Please try again.',
+    });
   }
 });
 
