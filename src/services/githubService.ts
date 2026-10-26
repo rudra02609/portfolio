@@ -22,6 +22,7 @@ export interface GitHubRepo {
   htmlUrl: string;
   homepage: string | null;
   isFeatured: boolean;
+  isFork: boolean;
 }
 
 export async function fetchGitHubRepos(): Promise<GitHubRepo[]> {
@@ -92,6 +93,7 @@ export async function fetchGitHubRepos(): Promise<GitHubRepo[]> {
         ["portfolio", "machine-learning", "deep-learning", "ai"].some((term) =>
           repo.name.toLowerCase().includes(term)
         ),
+      isFork: repo.fork,
     }));
 
   // Cache the parsed response
