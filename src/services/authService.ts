@@ -25,6 +25,8 @@ export interface AuthResponse {
   token: string;
 }
 
+export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+
 // Flag to prevent repeated probes of an unavailable backend within a session.
 let backendProbed = false;
 let backendUp = false;
@@ -62,16 +64,8 @@ async function post(path: string, body: unknown): Promise<AuthResponse> {
   return data as AuthResponse;
 }
 
-export async function login(email: string, password: string): Promise<AuthResponse> {
-  return post("/login", { email, password });
-}
-
-export async function register(
-  email: string,
-  password: string,
-  name?: string
-): Promise<AuthResponse> {
-  return post("/register", { email, password, name });
+export async function googleSignIn(credential: string): Promise<AuthResponse> {
+  return post("/google", { token: credential });
 }
 
 export async function fetchMe(token: string): Promise<AuthUser> {
@@ -103,10 +97,6 @@ export function getStoredToken(): string | null {
   return localStorage.getItem("authToken");
 }
 
-export function getStoredGuest(): boolean {
-  return localStorage.getItem("portfolioGuest") === "1";
-}
-
 export function storeAuth(user: AuthUser, token: string) {
   localStorage.setItem("portfolioUser", JSON.stringify(user));
   localStorage.setItem("authToken", token);
@@ -115,12 +105,4 @@ export function storeAuth(user: AuthUser, token: string) {
 export function clearAuth() {
   localStorage.removeItem("portfolioUser");
   localStorage.removeItem("authToken");
-}
-
-export function storeGuest() {
-  localStorage.setItem("portfolioGuest", "1");
-}
-
-export function clearGuest() {
-  localStorage.removeItem("portfolioGuest");
 }

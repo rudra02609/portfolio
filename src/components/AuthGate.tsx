@@ -1,208 +1,156 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { profile } from '../constants/portfolioData';
-
-type Mode = 'login' | 'register';
+import { GOOGLE_CLIENT_ID } from '../services/authService';
 
 /**
- * Full-screen authentication gate shown before the portfolio is accessible.
+ * Full-screen Google login screen shown before the portfolio is accessible.
  * Rendered as a fixed overlay ON TOP of the (locked) portfolio. It unmounts
- * completely once the visitor signs in, creates an account, or continues as
- * a guest, so no authentication UI remains in the page flow.
+ * completely once the visitor signs in with Google, so no login UI remains
+ * in the page flow.
+ *
+ * Uses Google Identity Services. On success the returned ID token credential
+ * is sent to the backend (POST /api/auth/google) which verifies it server-side.
  */
 export const AuthGate: React.FC = () => {
-  const [mode, setMode] = useState<Mode>('login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [name, setName] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  const { login, register, enterGuestMode, error, backendAvailable } = useAuth();
+  const { loginWithGoogle, error, backendAvailable } = useAuth();
   const { toast } = useToast();
+  const buttonRef = useRef<HTMLDivElement | null>(null);
+  const [submitting, setSubmitting] = React.useState(false);
 
-  const validate = (): boolean => {
-    const e: Record<string, string> = {};
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      e.email = 'Please enter a valid email address.';
+  // Signal the Google button so it appears clickable.
+  useEffect(() => {
+    if (submitting) {
+      document.body.style.cursor = 'wait';
+    } else {
+      document.body.style.cursor = '';
     }
-    if (password.length < 6) {
-      e.password = 'Password must be at least 6 characters.';
-    }
-    if (mode === 'register' && password !== confirm) {
-      e.confirm = 'Passwords do not match.';
-    }
-    setFieldErrors(e);
-    return Object.keys(e).length === 0;
-  };
+    return () => {
+      document.body.style.cursor = '';
+    };
+  }, [submitting]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-    setSubmitting(true);
-    try {
-      if (mode === 'login') {
-        await login(email.trim(), password);
-        toast('Signed in successfully.', 'success');
-      } else {
-        await register({ email: email.trim(), password, name: name.trim() });
-        toast('Account created successfully.', 'success');
-      }
-    } catch {
-      /* error surfaced via context */
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  // Load Google Identity Services and render the sign-in button.
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return;
+    if (!window) return;
 
-  const inputCls = (key: string) =>
-    `portfolio-input w-full rounded-xl px-4 py-2.5 text-[14px] ${
-      fieldErrors[key] ? 'border-red-400/60' : ''
-    }`;
+    const existing = document.getElementById('gsi-script');
+    const gsiScript =
+      (existing as HTMLScriptElement | null) ||
+      (() => {
+        const s = document.createElement('script');
+        s.id = 'gsi-script';
+        s.src = 'https://accounts.google.com/gsi/client';
+        s.async = true;
+        s.defer = true;
+        document.head.appendChild(s);
+        return s;
+      })();
+
+    const render = () => {
+      const global = window as unknown as {
+        google?: {
+          accounts: {
+            id: {
+              initialize: (opts: {
+                client_id: string;
+                callback: (resp: { credential?: string }) => void;
+              }) => void;
+              renderButton: (
+                el: HTMLElement,
+                opts: Record<string, unknown>
+              ) => void;
+            };
+          };
+        };
+      };
+      if (!global.google?.accounts?.id || !buttonRef.current) return;
+
+      global.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: async (response) => {
+          if (!response.credential) {
+            toast('Google sign-in was cancelled.', 'error');
+            return;
+          }
+          try {
+            setSubmitting(true);
+            await loginWithGoogle(response.credential);
+            toast('Signed in successfully.', 'success');
+          } catch {
+            // Error surfaced via the context and rendered below.
+          } finally {
+            setSubmitting(false);
+          }
+        },
+      });
+
+      global.google.accounts.id.renderButton(buttonRef.current, {
+        theme: 'filled_black',
+        size: 'large',
+        shape: 'pill',
+        width: 300,
+        text: 'continue_with',
+      });
+    };
+
+    if (gsiScript.getAttribute('data-loaded')) {
+      render();
+    } else {
+      const onLoad = () => {
+        gsiScript.setAttribute('data-loaded', 'true');
+        render();
+      };
+      gsiScript.addEventListener('load', onLoad);
+      return () => gsiScript.removeEventListener('load', onLoad);
+    }
+  }, [loginWithGoogle, toast]);
 
   return (
     <div
       id="auth-gate"
       className="fixed inset-0 z-[150] flex items-center justify-center overflow-y-auto px-5 py-8"
       style={{
-        background: 'rgba(0,0,0,0.78)',
-        backdropFilter: 'blur(14px)',
-        WebkitBackdropFilter: 'blur(14px)',
+        backgroundColor: 'rgba(4, 4, 8, 0.92)',
       }}
     >
       <div className="w-full max-w-md my-auto">
         <div className="text-center mb-6">
           <p
-            className="text-white text-[24px] sm:text-[28px] mb-1"
+            className="text-white text-[24px] sm:text-[28px] mb-2"
             style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}
           >
-            {profile.name}
+            My Portfolio
           </p>
-          <p className="text-white/45 text-[13px]">Sign in to continue to the portfolio</p>
+          <p className="text-white/45 text-[13px]">Welcome to My Portfolio</p>
+          <p className="text-white/45 text-[13px]">Sign in with Google to continue</p>
         </div>
 
-        <div className="glass rounded-3xl p-6 sm:p-8">
+        <div className="glass rounded-3xl p-6 sm:p-8 text-center">
+          {!GOOGLE_CLIENT_ID && (
+            <div className="text-red-300 text-[13px] border border-red-400/30 bg-red-400/10 rounded-xl px-4 py-3 mb-5">
+              Google Client ID is not configured. Set VITE_GOOGLE_CLIENT_ID in your
+              frontend .env file.
+            </div>
+          )}
+
           {error && (
             <div className="text-red-300 text-[13px] border border-red-400/30 bg-red-400/10 rounded-xl px-4 py-3 mb-5">
               {error}
             </div>
           )}
 
-          {/* Mode toggle */}
-          <div className="flex rounded-xl bg-white/5 border border-white/10 p-1 mb-6">
-            {(['login', 'register'] as Mode[]).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => {
-                  setMode(m);
-                  setFieldErrors({});
-                }}
-                className={`flex-1 rounded-lg py-2 text-[14px] transition-colors cursor-pointer ${
-                  mode === m ? 'bg-white text-black' : 'text-white/60 hover:text-white'
-                }`}
-              >
-                {m === 'login' ? 'Sign In' : 'Create Account'}
-              </button>
-            ))}
-          </div>
+          <div ref={buttonRef} className="flex justify-center" />
 
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-            {mode === 'register' && (
-              <div>
-                <label className="block text-[12px] text-white/50 mb-1.5">Name (optional)</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
-                  className={inputCls('name')}
-                />
-              </div>
-            )}
-
-            <div>
-              <label className="block text-[12px] text-white/50 mb-1.5">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                autoComplete="email"
-                className={inputCls('email')}
-              />
-              {fieldErrors.email && (
-                <p className="text-red-400 text-[12px] mt-1">{fieldErrors.email}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-[12px] text-white/50 mb-1.5">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                className={inputCls('password')}
-              />
-              {fieldErrors.password && (
-                <p className="text-red-400 text-[12px] mt-1">{fieldErrors.password}</p>
-              )}
-            </div>
-
-            {mode === 'register' && (
-              <div>
-                <label className="block text-[12px] text-white/50 mb-1.5">Confirm Password</label>
-                <input
-                  type="password"
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  className={inputCls('confirm')}
-                />
-                {fieldErrors.confirm && (
-                  <p className="text-red-400 text-[12px] mt-1">{fieldErrors.confirm}</p>
-                )}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full rounded-xl px-4 py-3 text-[15px] bg-white text-black font-medium hover:bg-white/85 transition-colors cursor-pointer disabled:opacity-60"
-            >
-              {submitting
-                ? 'Please wait…'
-                : mode === 'login'
-                ? 'Sign In'
-                : 'Create Account'}
-            </button>
-          </form>
-
-          <div className="flex items-center gap-3 text-white/30 text-[12px] my-5">
-            <span className="flex-1 h-px bg-white/10" />
-            or
-            <span className="flex-1 h-px bg-white/10" />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              enterGuestMode();
-              toast('Continuing as guest.', 'info');
-            }}
-            className="w-full rounded-xl px-4 py-3 text-[14px] border border-white/20 text-white/80 hover:text-white transition-colors cursor-pointer"
-          >
-            Continue as Guest
-          </button>
+          {submitting && (
+            <p className="text-white/50 text-[13px] mt-4">Signing you in…</p>
+          )}
 
           {!backendAvailable && (
-            <p className="text-white/40 text-[12px] text-center mt-5 leading-relaxed">
-              The authentication server is not reachable. You can still continue as a guest.
+            <p className="text-white/40 text-[12px] mt-6 leading-relaxed">
+              The authentication server is not reachable. Please make sure the backend is
+              running and try again.
             </p>
           )}
         </div>
