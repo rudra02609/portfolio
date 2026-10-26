@@ -4,9 +4,7 @@ const userSchema = new mongoose.Schema(
   {
     name: { type: String, default: '' },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    // Hashed password for email/password accounts (never plain-text).
-    passwordHash: { type: String, select: false },
-    // Optional Google profile fields (kept for optional OAuth, not required).
+    // Google profile fields (auth is Google OAuth 2.0 only).
     googleId: { type: String, unique: true, sparse: true },
     picture: { type: String },
     verified: { type: Boolean, default: false },
