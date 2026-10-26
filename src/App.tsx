@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from './context/AuthContext';
 import { BackgroundVideo } from './components/BackgroundVideo';
 import { CustomCursor } from './components/effects/CustomCursor';
@@ -16,6 +16,8 @@ import { Footer } from './components/sections/Footer';
 
 export default function App() {
   const { isLoadingGate, isAuthenticated } = useAuth();
+  const [activeSection, setActiveSection] = useState<string>('hero');
+  const onNavigate = (section: string) => setActiveSection(section);
 
   // Lock page scroll while the authentication gate is visible so the portfolio
   // behind it cannot be scrolled or interacted with.
@@ -36,7 +38,7 @@ export default function App() {
       <CustomCursor />
 
       {/* Fixed top Navbar */}
-      <Navbar />
+      <Navbar activeSection={activeSection} onNavigate={onNavigate} />
 
       {/* Floating account control (bottom-right) */}
       <AccountPanel />
