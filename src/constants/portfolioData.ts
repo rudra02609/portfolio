@@ -12,7 +12,7 @@ export const profile = {
     "Building the future of intelligent applications using Deep Learning, Machine Learning, and modern Web Technologies.",
   aboutShort:
     "Passionate about Artificial Intelligence, Machine Learning, Python Development, and Web Applications. I enjoy building intelligent solutions, analyzing datasets, and engineering products that solve real-world challenges.",
-  resumeUrl: "#", // Replace with a direct link to the resume PDF
+  resumeUrl: "/resume/rudra-prajapati-resume.pdf",
   avatar: undefined, // Optional avatar image path (e.g. "/assets/avatar.png")
 };
 
@@ -120,6 +120,7 @@ export interface TimelineItem {
   date: string;
   description: string;
   tags?: string[];
+  image?: string;
 }
 
 export const education: TimelineItem[] = [
@@ -134,11 +135,130 @@ export const education: TimelineItem[] = [
   },
 ];
 
-export const experience: TimelineItem[] = [];
+export const experience: TimelineItem[] = [
+  {
+    type: "experience",
+    title: "Data Science Intern",
+    subtitle: "Synent Technologies — SYN-SIP AICTE Internship Program",
+    date: "May 2026 – Jun 2026",
+    description:
+      "Successfully completed a 6-week SYN-SIP AICTE Internship Program as a Data Science Intern at Synent Technologies with highly commendable remarks. Gained practical experience in Data Science, Data Visualization, Exploratory Data Analysis (EDA), Time Series Analysis, and Machine Learning, working on data-driven problems and developing practical analytical solutions.",
+    tags: ["Python", "Pandas", "Data Visualization", "EDA", "Machine Learning", "Time Series Analysis", "Scikit-learn", "Jupyter Notebook"],
+  },
+];
 
 export const certifications: TimelineItem[] = [];
 
-export const achievements: TimelineItem[] = [];
+// ============================================================
+// CERTIFICATES — Domain-organized certificate portfolio
+// ============================================================
+
+export interface CertificateItem {
+  name: string;
+  file: string;
+  issuer?: string;
+  date?: string;
+  skills?: string[];
+}
+
+export interface CertificateDomain {
+  domain: string;
+  icon: string;
+  certificates: CertificateItem[];
+}
+
+export const certificateDomains: CertificateDomain[] = [
+  {
+    domain: "Hackathons",
+    icon: "🏆",
+    certificates: [
+      {
+        name: "TetraTHON 2026 — AI Innovation Hackathon",
+        file: "/Certificates/Tetrathon-2026-hackathon.pdf",
+        issuer: "Navrachana University × ISEN Méditerranée, France",
+        date: "7 August 2026",
+        skills: ["AI Innovation", "Machine Learning", "Rapid Prototyping", "Team Leadership"],
+      },
+      {
+        name: "Math Flow AI Hackathon",
+        file: "/Certificates/math-flow-ai-hackathon.jpg",
+        issuer: "CHARUSAT University",
+        skills: ["Artificial Intelligence", "Problem Solving", "Mathematical Modeling"],
+      },
+      {
+        name: "CyberKavach Hackathon",
+        file: "/Certificates/cyberkavach-hackathon.pdf",
+        skills: ["Cybersecurity", "Network Security", "Ethical Hacking", "Problem Solving"],
+      },
+      {
+        name: "Mind Sprint Hackathon",
+        file: "/Certificates/Mind-sprint-hackathon.pdf",
+        skills: ["Hackathon", "Problem Solving", "Team Collaboration"],
+      },
+      {
+        name: "Coders Arcade 2.0 Hackathon",
+        file: "/Certificates/Coders-arcade2.0-hackathon.pdf",
+        skills: ["Competitive Programming", "Problem Solving", "Team Collaboration"],
+      },
+    ],
+  },
+  {
+    domain: "Coursera",
+    icon: "🎓",
+    certificates: [
+      {
+        name: "Introduction to Java",
+        file: "/Certificates/Coursera Introduction to java.pdf",
+        issuer: "Coursera",
+        skills: ["Java", "Object-Oriented Programming", "Core Java Concepts"],
+      },
+      {
+        name: "Design and Analysis of Algorithms",
+        file: "/Certificates/DAA Coursera.pdf",
+        issuer: "Coursera",
+        skills: ["Algorithms", "Data Structures", "Complexity Analysis", "Problem Solving"],
+      },
+      {
+        name: "Foundation of Data Structures & Algorithms",
+        file: "/Certificates/foundation of dsa.pdf",
+        issuer: "Coursera",
+        skills: ["Data Structures", "Algorithms", "DSA Fundamentals"],
+      },
+      {
+        name: "Java Class Library",
+        file: "/Certificates/java class library .pdf",
+        issuer: "Coursera",
+        skills: ["Java", "Java Collections Framework", "Standard Library"],
+      },
+    ],
+  },
+  {
+    domain: "Internship",
+    icon: "🏢",
+    certificates: [
+      {
+        name: "Data Science Intern — SYN-SIP AICTE Program",
+        file: "/Certificates/internship_Certificate.pdf",
+        issuer: "Synent Technologies",
+        date: "May 2026 – Jun 2026",
+        skills: ["Data Science", "Machine Learning", "EDA", "Time Series Analysis", "Python"],
+      },
+    ],
+  },
+];
+
+export const achievements: TimelineItem[] = [
+  {
+    type: "achievement",
+    title: "TetraTHON 2026 — Second Runner-Up",
+    subtitle: "Indo-French AI Innovation Hackathon",
+    date: "7 August 2026",
+    description:
+      "Secured Second Runner-Up (3rd Place) in TetraTHON 2026, a high-intensity 36-hour Indo-French AI Innovation Sprint hosted by Navrachana University, Vadodara, in partnership with ISEN Méditerranée, France. Finished among the Top 9 finalist teams out of 160 participating teams, receiving a ₹25,000 team prize. The achievement highlights excellence in AI innovation, technical problem-solving, teamwork, and rapid development under extreme time constraints.",
+    tags: ["🏆 3rd Place", "Top 9 / 160 Teams", "₹25,000 Prize", "36-Hour Sprint", "Navrachana University × ISEN France", "Rudra Prajapati", "Khushi Vadadoriya", "Vipulkumar Patel", "Diya Patel"],
+    image: "/Certificates/Tetrathon-2026-2nd-runnerup.jpeg",
+  },
+];
 
 export const contactInfo = {
   email: "rudra02609@gmail.com",
