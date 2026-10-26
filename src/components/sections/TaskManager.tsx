@@ -149,8 +149,14 @@ export const TaskManager: React.FC = () => {
           ...(localStorage.getItem('authToken') ? { Authorization: `Bearer ${localStorage.getItem('authToken')}` } : {}),
         },
       });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || 'AI Insight failed');
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'AI Insight failed');
+      if (!data || !data.success) {
+        throw new Error(data?.message || 'AI Insight failed');
+      }
       setAiInsight(data.insight);
       setAiInsightOpen(true);
     } catch (e: unknown) {
