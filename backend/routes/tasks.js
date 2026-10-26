@@ -201,4 +201,33 @@ router.post('/:id/ai-insight', async (req, res) => {
   }
 });
 
+// POST /api/tasks/generate-description
+router.post('/generate-description', async (req, res) => {
+  try {
+    const { title } = req.body;
+    if (!title || typeof title !== 'string' || !title.trim()) {
+      return res.status(400).json({ success: false, message: 'Task title is required.' });
+    }
+
+    if (title.trim().length > 100) {
+      return res.status(400).json({ success: false, message: 'Task title is too long.' });
+    }
+
+    // Generate description using Gemini AI
+    const description = await geminiService.generateDescription(title.trim());
+
+    res.json({
+      success: true,
+      description,
+    });
+  } catch (err) {
+    console.error('[generate-description] Error:', err.message);
+    const status = err.status || 500;
+    res.status(status).json({
+      success: false,
+      message: err.message || 'Failed to generate description. Please try again.',
+    });
+  }
+});
+
 module.exports = router;

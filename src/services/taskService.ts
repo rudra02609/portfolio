@@ -78,10 +78,12 @@ async function probeBackend(): Promise<boolean> {
   if (backendAvailable.probed) return backendAvailable.value;
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 2500);
+    const timer = setTimeout(() => controller.abort(), 3000);
     const res = await fetch(`${buildUrl("/health")}`, { signal: controller.signal });
     clearTimeout(timer);
     backendAvailable.value = res.ok;
+    // Also verify we can create a task by checking the response status
+    backendAvailable.value = backendAvailable.value && res.status === 200;
   } catch {
     backendAvailable.value = false;
   }
@@ -108,7 +110,12 @@ export const getTasks = async (params: GetTasksParams = {}): Promise<TasksRespon
     const response = await fetch(`${buildUrl("/tasks")}?${queryParams.toString()}`, {
       headers: getAuthHeader(),
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    return {
+      ...data,
+      tasks: ((data.tasks as RawTask[]) || []).map(normalizeTask),
+      total: data.total ?? 0,
+    };
   }
 
   // Local fallback
@@ -138,13 +145,39 @@ export const getTasks = async (params: GetTasksParams = {}): Promise<TasksRespon
 };
 
 export const getTaskById = async (id: string): Promise<{ task: Task }> => {
+  if (!id) throw new Error("Task id is missing.");
   if (await probeBackend()) {
     const response = await fetch(buildUrl(`/tasks/${id}`), { headers: getAuthHeader() });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    return { task: normalizeTask(data.task) };
   }
   const task = readLocal().find((t) => t.id === id);
   if (!task) throw new Error("Task not found.");
-  return { task: toTask(task) };
+  return { task: normalizeTask(task) };
+};
+
+export interface RawTask {
+  _id?: string;
+  id?: string;
+  title: string;
+  description?: string;
+  completed?: boolean;
+  priority?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+const normalizeTask = (t: RawTask): Task => {
+  const id = t._id ?? t.id ?? "";
+  return {
+    id,
+    title: t.title,
+    description: t.description || "",
+    completed: !!t.completed,
+    priority: (t.priority as Task["priority"]) || "Low",
+    createdAt: t.createdAt || "",
+    updatedAt: t.updatedAt || "",
+  };
 };
 
 export const createTask = async (taskData: {
@@ -160,6 +193,7 @@ export const createTask = async (taskData: {
     });
     return handleResponse(response);
   }
+  // Local fallback: create task in browser localStorage
   const now = new Date().toISOString();
   const task: Task = {
     id: uid(),
@@ -179,6 +213,7 @@ export const updateTask = async (
   id: string,
   taskData: { title?: string; description?: string; priority?: string }
 ): Promise<{ task: Task }> => {
+  if (!id) throw new Error("Task id is missing.");
   if (await probeBackend()) {
     const response = await fetch(buildUrl(`/tasks/${id}`), {
       method: "PUT",
@@ -187,6 +222,7 @@ export const updateTask = async (
     });
     return handleResponse(response);
   }
+  // Local fallback
   const tasks = readLocal();
   const idx = tasks.findIndex((t) => t.id === id);
   if (idx === -1) throw new Error("Task not found.");
@@ -197,10 +233,11 @@ export const updateTask = async (
     updatedAt: new Date().toISOString(),
   };
   writeLocal(tasks);
-  return { task: toTask(tasks[idx]) };
+  return { task: normalizeTask(tasks[idx]) };
 };
 
 export const toggleTaskComplete = async (id: string, completed: boolean): Promise<{ task: Task }> => {
+  if (!id) throw new Error("Task id is missing.");
   if (await probeBackend()) {
     const response = await fetch(buildUrl(`/tasks/${id}/complete`), {
       method: "PATCH",
@@ -209,15 +246,17 @@ export const toggleTaskComplete = async (id: string, completed: boolean): Promis
     });
     return handleResponse(response);
   }
+  // Local fallback
   const tasks = readLocal();
   const idx = tasks.findIndex((t) => t.id === id);
   if (idx === -1) throw new Error("Task not found.");
   tasks[idx] = { ...tasks[idx], completed, updatedAt: new Date().toISOString() };
   writeLocal(tasks);
-  return { task: toTask(tasks[idx]) };
+  return { task: normalizeTask(tasks[idx]) };
 };
 
 export const deleteTask = async (id: string): Promise<{ message: string }> => {
+  if (!id) throw new Error("Task id is missing.");
   if (await probeBackend()) {
     const response = await fetch(buildUrl(`/tasks/${id}`), {
       method: "DELETE",
@@ -225,6 +264,7 @@ export const deleteTask = async (id: string): Promise<{ message: string }> => {
     });
     return handleResponse(response);
   }
+  // Local fallback
   writeLocal(readLocal().filter((t) => t.id !== id));
   return { message: "Task deleted." };
 };
