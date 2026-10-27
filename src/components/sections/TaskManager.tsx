@@ -4,7 +4,9 @@ import { SectionHeading } from '../ui/SectionHeading';
 import { useToast } from '../../context/ToastContext';
 import {
   Task,
+  AiInsight,
   getTasks,
+  getAiInsight,
   createTask,
   updateTask,
   toggleTaskComplete,
@@ -38,7 +40,7 @@ export const TaskManager: React.FC = () => {
   const [editing, setEditing] = useState<Task | null>(null);
   const [form, setForm] = useState({ title: '', description: '', priority: 'Low' as Task['priority'] });
   const [saving, setSaving] = useState(false);
-  const [aiInsight, setAiInsight] = useState(null);
+  const [aiInsight, setAiInsight] = useState<AiInsight | null>(null);
   const [aiInsightOpen, setAiInsightOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
 
@@ -99,14 +101,14 @@ export const TaskManager: React.FC = () => {
       if (editing) {
         await updateTask(editing.id, {
           title: form.title.trim(),
-          description: form.description.trim() || undefined,
+          description: form.description.trim(),
           priority: form.priority,
         });
         toast('Task updated.', 'success');
       } else {
         await createTask({
           title: form.title.trim(),
-          description: form.description.trim() || undefined,
+          description: form.description.trim(),
           priority: form.priority,
         });
         toast('Task created.', 'success');
@@ -130,36 +132,26 @@ export const TaskManager: React.FC = () => {
   };
 
   const handleDelete = async (task: Task) => {
+    if (!window.confirm(`Delete "${task.title}"? This cannot be undone.`)) return;
     try {
       await deleteTask(task.id);
       toast('Task deleted.', 'success');
-      await loadTasks(page);
+      const nextPage = tasks.length === 1 && page > 1 ? page - 1 : page;
+      await loadTasks(nextPage);
     } catch (e: unknown) {
       toast(e instanceof Error ? e.message : 'Failed to delete task.', 'error');
     }
   };
 
   const handleAiInsight = async (taskId: string) => {
+    setAiInsight(null);
+    setAiInsightOpen(true);
     setAiLoading(true);
     try {
-      const res = await fetch(`/api/tasks/${taskId}/ai-insight`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(localStorage.getItem('authToken') ? { Authorization: `Bearer ${localStorage.getItem('authToken')}` } : {}),
-        },
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || 'AI Insight failed');
-      }
-      const data = await res.json();
-      if (!data || !data.success) {
-        throw new Error(data?.message || 'AI Insight failed');
-      }
-      setAiInsight(data.insight);
-      setAiInsightOpen(true);
+      const insight = await getAiInsight(taskId);
+      setAiInsight(insight);
     } catch (e: unknown) {
+      setAiInsightOpen(false);
       toast(e instanceof Error ? e.message : 'AI Insight is temporarily unavailable. Please try again.', 'error');
     } finally {
       setAiLoading(false);
@@ -449,13 +441,13 @@ export const TaskManager: React.FC = () => {
               <div className="w-10 h-10 rounded-full border-2 border-white/20 border-t-white animate-spin" />
               <span className="text-white/50 ml-3">Analyzing...</span>
             </div>
-          ) : (
+          ) : aiInsight ? (
             <div className="space-y-4">
               <p className="text-white/70 text-[13px]">{aiInsight.summary}</p>
               
               <h4 className="text-white/50 text-[13px] mb-2">How to Complete</h4>
               <ol className="list-decimal list-inside space-y-1">
-                {aiInsight.completionPlan.map((step, i) => (
+                {(aiInsight.completionPlan || []).map((step, i) => (
                   <li
                     key={i}
                     className="text-white/70 text-[13px] leading-relaxed"
@@ -509,6 +501,8 @@ export const TaskManager: React.FC = () => {
                 <p className="text-white text-[14px] leading-relaxed">{aiInsight.recommendation}</p>
               </div>
             </div>
+          ) : (
+            <p className="text-white/60 text-[13px]">AI Insight is unavailable. Please try again.</p>
           )}
           
           <div className="mt-6 flex gap-3">
