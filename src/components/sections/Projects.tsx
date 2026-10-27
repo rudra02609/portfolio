@@ -105,7 +105,7 @@ export const Projects: React.FC = () => {
             {filtered.map((repo, i) => (
               <motion.a
                 key={repo.id}
-                href={repo.htmlUrl}
+                href={repo.html_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 initial={{ opacity: 0, y: 16 }}
@@ -120,7 +120,7 @@ export const Projects: React.FC = () => {
                     style={{ fontFamily: 'var(--font-heading)' }}
                   >
                     {repo.name}
-                    {repo.isFork && (
+                    {repo.fork && (
                       <span className="ml-2 inline-block text-[10px] text-amber-300/80 bg-amber-300/10 border border-amber-300/20 rounded-full px-1.5 py-0 align-middle">
                         Forked
                       </span>
@@ -156,14 +156,14 @@ export const Projects: React.FC = () => {
                     {repo.language}
                   </span>
                   <div className="flex items-center gap-3">
-                    <span title="Stars">★ {repo.stars}</span>
-                    <span title="Forks">⑂ {repo.forks}</span>
-                    {repo.license && <span title={repo.license}>{repo.license}</span>}
+                    <span title="Stars">★ {repo.stargazers_count}</span>
+                    <span title="Forks">⑂ {repo.forks_count}</span>
+                    {repo.license && <span title={repo.license.name}>{repo.license.name}</span>}
                   </div>
                 </div>
 
                 <div className="text-[11px] text-white/35">
-                  Updated {repo.updatedAt}
+                  Updated {repo.updated_at}
                 </div>
               </motion.a>
             ))}

@@ -6,23 +6,23 @@ const CACHE_KEY = "github_repos_data_rudra";
 // Read GitHub token from env (optional). Never expose a secret in the UI bundle.
 const getToken = () => import.meta.env.VITE_GITHUB_TOKEN || "";
 
+// GitHub API returns repo data with snake_case property names
 export interface GitHubRepo {
   id: number;
   name: string;
-  rawName: string;
-  description: string;
-  language: string;
-  stars: number;
-  forks: number;
-  issues: number;
-  license: string;
-  createdAt: string;
-  updatedAt: string;
+  description: string | null;
+  language: string | null;
+  stargazers_count: number;
+  forks_count: number;
+  open_issues_count: number;
+  license: { name: string } | null;
+  created_at: string;
+  updated_at: string;
   topics: string[];
-  htmlUrl: string;
+  html_url: string;
   homepage: string | null;
-  isFeatured: boolean;
-  isFork: boolean;
+  fork: boolean;
+  archived: boolean;
 }
 
 export async function fetchGitHubRepos(): Promise<GitHubRepo[]> {
@@ -58,7 +58,7 @@ export async function fetchGitHubRepos(): Promise<GitHubRepo[]> {
       throw new Error(`GitHub API returned status: ${response.status}`);
     }
 
-    const data: any[] = await response.json();
+    const data: GitHubRepo[] = await response.json();
     allRepos.push(...data);
 
     // Parse Link header for next page
@@ -78,45 +78,10 @@ export async function fetchGitHubRepos(): Promise<GitHubRepo[]> {
     return true;
   });
 
+  // Filter out .github repo and archived repos, then sort by updated date descending
   const formattedRepos: GitHubRepo[] = uniqueRepos
     .filter((repo) => repo.name !== ".github" && !repo.archived)
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-    .map((repo) => ({
-      id: repo.id,
-      name: repo.name.replace(/-/g, " "),
-      rawName: repo.name,
-      description:
-        repo.description ||
-        "An interesting project built with dedication and clean engineering principles.",
-      language: repo.language || "JavaScript",
-      stars: repo.stargazers_count,
-      forks: repo.forks_count,
-      issues: repo.open_issues_count,
-      license: repo.license ? repo.license.name : "MIT License",
-      createdAt: new Date(repo.created_at).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      }),
-      updatedAt: new Date(repo.updated_at).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      }),
-      topics:
-        repo.topics && repo.topics.length > 0
-          ? repo.topics
-          : [repo.language ? repo.language.toLowerCase() : "code"],
-      htmlUrl: repo.html_url,
-      homepage: repo.homepage || null,
-      isFeatured:
-        repo.stargazers_count > 0 ||
-        repo.forks_count > 0 ||
-        ["portfolio", "machine-learning", "deep-learning", "ai"].some((term) =>
-          repo.name.toLowerCase().includes(term)
-        ),
-      isFork: repo.fork,
-    }));
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
   // Cache the parsed response
   sessionStorage.setItem(CACHE_KEY, JSON.stringify(formattedRepos));
