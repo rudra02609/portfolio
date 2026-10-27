@@ -98,7 +98,8 @@ export const Certificates: React.FC = () => {
               {/* Certificate grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {domainGroup.certificates.map((cert, i) => {
-                  const isImage = isImageFile(cert.file);
+                  const hasFile = Boolean(cert.file);
+                  const isImage = hasFile && isImageFile(cert.file);
                   return (
                     <motion.div
                       key={cert.file}
@@ -109,12 +110,13 @@ export const Certificates: React.FC = () => {
                       className="glass rounded-2xl overflow-hidden glow-card flex flex-col"
                     >
                       {/* Preview area */}
-                      <a
-                        href={cert.file}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block relative group"
-                      >
+                      {hasFile ? (
+                        <a
+                          href={cert.file}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block relative group"
+                        >
                         {isImage ? (
                           <div className="w-full aspect-[16/10] bg-white/[0.02] flex items-center justify-center overflow-hidden">
                             <img
@@ -141,7 +143,12 @@ export const Certificates: React.FC = () => {
                             View Certificate
                           </span>
                         </div>
-                      </a>
+                        </a>
+                      ) : (
+                        <div className="w-full aspect-[16/10] bg-white/[0.02] flex items-center justify-center">
+                          <span className="text-[13px] text-white/40">Certificate preview unavailable</span>
+                        </div>
+                      )}
 
                       {/* Card content */}
                       <div className="p-4 sm:p-5 flex flex-col flex-1">

@@ -174,7 +174,7 @@ export const certificateDomains: CertificateDomain[] = [
     certificates: [
       {
         name: "TetraTHON 2026 — AI Innovation Hackathon",
-        file: "/Certificates/Tetrathon-2026-hackathon.pdf",
+        file: "/Certificates/hackhathon/Tetrathon 2026.jpg",
         issuer: "Navrachana University × ISEN Méditerranée, France",
         date: "7 August 2026",
         skills: ["AI Innovation", "Machine Learning", "Rapid Prototyping", "Team Leadership"],
@@ -182,22 +182,17 @@ export const certificateDomains: CertificateDomain[] = [
       {
         name: "Math Flow AI Hackathon",
         file: "/Certificates/math-flow-ai-hackathon.jpg",
-        issuer: "CHARUSAT University",
+issuer: "CHARUSAT University",
         skills: ["Artificial Intelligence", "Problem Solving", "Mathematical Modeling"],
       },
       {
-        name: "CyberKavach Hackathon",
-        file: "/Certificates/cyberkavach-hackathon.pdf",
-        skills: ["Cybersecurity", "Network Security", "Ethical Hacking", "Problem Solving"],
-      },
-      {
         name: "Mind Sprint Hackathon",
-        file: "/Certificates/Mind-sprint-hackathon.pdf",
+        file: "/Certificates/hackhathon/Mind sprint hackathon.jpg",
         skills: ["Hackathon", "Problem Solving", "Team Collaboration"],
       },
       {
         name: "Coders Arcade 2.0 Hackathon",
-        file: "/Certificates/Coders-arcade2.0-hackathon.pdf",
+        file: "/Certificates/hackhathon/Coders-arcade2.0.jpg",
         skills: ["Competitive Programming", "Problem Solving", "Team Collaboration"],
       },
     ],
@@ -208,13 +203,13 @@ export const certificateDomains: CertificateDomain[] = [
     certificates: [
       {
         name: "Introduction to Java",
-        file: "/Certificates/Coursera Introduction to java.pdf",
+        file: "/Certificates/coursera/Coursera Introduction to java.jpg",
         issuer: "Coursera",
         skills: ["Java", "Object-Oriented Programming", "Core Java Concepts"],
       },
       {
         name: "Design and Analysis of Algorithms",
-        file: "/Certificates/DAA Coursera.pdf",
+        file: "/Certificates/coursera/DAA Coursera.jpg",
         issuer: "Coursera",
         skills: ["Algorithms", "Data Structures", "Complexity Analysis", "Problem Solving"],
       },
@@ -226,9 +221,17 @@ export const certificateDomains: CertificateDomain[] = [
       },
       {
         name: "Java Class Library",
-        file: "/Certificates/java class library .pdf",
+        file: "/Certificates/coursera/java class library.jpg",
         issuer: "Coursera",
         skills: ["Java", "Java Collections Framework", "Standard Library"],
+      },
++      {
++        name: "Advanced Web Development Frameworks",
++        file: "/Certificates/coursera/AWDF Coursera.jpg",
++        issuer: "Coursera",
++        date: "3 September 2026",
++        skills: ["Web Development", "Web Frameworks", "Frontend Development"],
++      },
       },
     ],
   },
@@ -238,7 +241,7 @@ export const certificateDomains: CertificateDomain[] = [
     certificates: [
       {
         name: "Data Science Intern — SYN-SIP AICTE Program",
-        file: "/Certificates/internship_Certificate.pdf",
+        file: "/Certificates/internship/Prajapati Rudra  Certificate.jpg",
         issuer: "Synent Technologies",
         date: "May 2026 – Jun 2026",
         skills: ["Data Science", "Machine Learning", "EDA", "Time Series Analysis", "Python"],
