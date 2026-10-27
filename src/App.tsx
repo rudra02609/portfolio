@@ -18,7 +18,20 @@ import { Footer } from './components/sections/Footer';
 export default function App() {
   const { isLoadingGate, isAuthenticated } = useAuth();
   const [activeSection, setActiveSection] = useState<string>('hero');
-  const onNavigate = (section: string) => setActiveSection(section);
+  const onNavigate = (section: string) => {
+    setActiveSection(section);
+    // Scroll to the section when navigating via navbar
+    const el = document.getElementById(section);
+    if (el) {
+      const headerOffset = 80;
+      const elementPosition = el.offsetTop - headerOffset;
+      const offsetPosition = elementPosition;
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth',
+      });
+    }
+  };
 
   // Lock page scroll while the authentication gate is visible so the portfolio
   // behind it cannot be scrolled or interacted with.
@@ -29,6 +42,60 @@ export default function App() {
       document.body.style.overflow = '';
     };
   }, [isLoadingGate, isAuthenticated]);
+
+  // New: Scroll-spy to update active navbar section on scroll
+  useEffect(() => {
+    const sections = ['hero', 'about', 'skills', 'projects', 'timeline', 'certificates', 'tasks', 'contact'];
+    const navbarHeight = 80;
+
+    // Throttled scroll handler - checks section positions against viewport
+    let ticking = false;
+    const checkActiveSection = () => {
+      if (ticking) return;
+      ticking = true;
+
+      const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+      const scrollBottom = scrollY + window.innerHeight;
+      let active = 'hero';
+
+      for (let i = 0; i < sections.length; i++) {
+        const el = document.getElementById(sections[i]);
+        if (!el) continue;
+        const sectionTop = el.offsetTop;
+        const sectionHeight = el.offsetHeight || 200;
+        const sectionBottom = sectionTop + sectionHeight;
+
+        // A section is "active" if the scroll position is within its bounds
+        // Account for navbarHeight so the highlight kicks in before the section reaches the very top
+        if (scrollY >= sectionTop - navbarHeight && scrollY < sectionBottom) {
+          active = sections[i];
+          break;
+        }
+      }
+
+      if (activeSection !== active) {
+        setActiveSection(active);
+      }
+
+      ticking = false;
+    };
+
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(checkActiveSection);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+
+    // Initial check
+    checkActiveSection();
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   return (
     <main className="relative w-full min-h-screen bg-black text-white selection:bg-white selection:text-black overflow-x-hidden">
