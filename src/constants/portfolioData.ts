@@ -12,7 +12,7 @@ export const profile = {
     "Building the future of intelligent applications using Deep Learning, Machine Learning, and modern Web Technologies.",
   aboutShort:
     "Passionate about Artificial Intelligence, Machine Learning, Python Development, and Web Applications. I enjoy building intelligent solutions, analyzing datasets, and engineering products that solve real-world challenges.",
-  resumeUrl: "https://github.com/rudra02609?tab=repositories",
+  resumeUrl: "/resume/RUDRA%20PRAJAPATI%20RESUME.pdf",
   avatar: undefined, // Optional avatar image path (e.g. "/assets/avatar.png")
 };
 
