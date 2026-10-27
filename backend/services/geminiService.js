@@ -33,7 +33,8 @@ Return this exact JSON structure (no Markdown wrapping):
   "completed": ["Only things supported by task data", "or", "Not enough information in the task data."],
   "remaining": ["Remaining work based on available information", "or", "Not enough information in the task data."],
   "blockers": ["Possible blockers based on task information", "or", "Not enough information in the task data."],
-  "recommendation": "Best next action or "Not enough information in the task data."}
+  "recommendation": "Best next action, or 'Not enough information in the task data.'"
+}
 `;
 
 async function getAIInsight(taskData) {
@@ -44,7 +45,7 @@ async function getAIInsight(taskData) {
     throw err;
   }
 
-  const model = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 
   const prompt = `
 ${SYSTEM_PROMPT}
@@ -73,8 +74,10 @@ Please provide the AI insight for this task.
               parts: [{ text: prompt }],
             },
           ],
-          systemInstruction: {
-            text: SYSTEM_PROMPT.replace(/^You are a Task Completion Assistant\./m, "").trim(),
+          system_instruction: {
+            parts: [
+              { text: SYSTEM_PROMPT.replace(/^You are a Task Completion Assistant\./m, "").trim() },
+            ],
           },
         }),
       }
@@ -95,21 +98,33 @@ Please provide the AI insight for this task.
       throw new Error("Empty response from Gemini");
     }
 
+    // The REST API returns content as { parts: [{ text }] }, not a raw string.
+    const rawText = Array.isArray(content.parts)
+      ? content.parts.map((part) => part.text || "").join("")
+      : "";
+    const text = rawText
+      .trim()
+      .replace(/^```(?:json)?/i, "")
+      .replace(/```$/, "")
+      .trim();
+
+    if (!text) {
+      throw new Error("Empty response from Gemini");
+    }
+
     // Try to parse the JSON response
     try {
-      const parsed = JSON.parse(content);
-      return parsed;
+      return JSON.parse(text);
     } catch {
       // If AI didn't return valid JSON, try to extract structured parts
-      const result = {
-        summary: extractSection(content, "summary") || "No summary available",
-        completionPlan: extractPlan(content) || ["Not enough information in the task data."],
-        completed: extractSection(content, "completed") || ["Not enough information in the task data."],
-        remaining: extractSection(content, "remaining") || ["Not enough information in the task data."],
-        blockers: extractSection(content, "blockers") || ["Not enough information in the task data."],
-        recommendation: extractRecommendation(content) || "Not enough information in the task data.",
+      return {
+        summary: extractSection(text, "summary") || "No summary available",
+        completionPlan: extractList(text, "completionPlan") || ["Not enough information in the task data."],
+        completed: extractList(text, "completed") || ["Not enough information in the task data."],
+        remaining: extractList(text, "remaining") || ["Not enough information in the task data."],
+        blockers: extractList(text, "blockers") || ["Not enough information in the task data."],
+        recommendation: extractRecommendation(text) || "Not enough information in the task data.",
       };
-      return result;
     }
   } catch (error) {
     console.error("[geminiService] Gemini AI insight error:", error.message);
@@ -146,7 +161,7 @@ async function generateDescription(title) {
     throw err;
   }
 
-  const model = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 
   const systemPrompt = `
 You are a Task Description Generator. Given a task title, generate a concise, useful paragraph describing how to complete the task.
@@ -258,6 +273,14 @@ function extractRecommendation(text) {
   const regex = /"recommendation":\s*"([^"]*)"/m;
   const match = text.match(regex);
   return match ? match[1] : null;
+}
+
+function extractList(text, fieldName) {
+  const matches = text.match(new RegExp(`"${fieldName}":\\s*\\[([^\\]]*)\\]`, "m"));
+  if (!matches) return null;
+  const items = matches[1].match(/"([^"]*)"/g);
+  if (!items) return null;
+  return items.map((item) => item.slice(1, -1));
 }
 
 module.exports = { getAIInsight, isConfigured, initGemini, generateDescription };

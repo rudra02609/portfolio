@@ -36,6 +36,15 @@ export interface TasksResponse {
   totalPages: number;
 }
 
+export interface AiInsight {
+  summary: string;
+  completionPlan: string[];
+  completed: string[];
+  remaining: string[];
+  blockers: string[];
+  recommendation: string;
+}
+
 export interface GetTasksParams {
   page?: number;
   limit?: number;
@@ -125,7 +134,11 @@ export const getTasks = async (params: GetTasksParams = {}): Promise<TasksRespon
 
   if (params.search) {
     const q = params.search.toLowerCase();
-    tasks = tasks.filter((t) => t.title.toLowerCase().includes(q));
+    tasks = tasks.filter(
+      (t) =>
+        t.title.toLowerCase().includes(q) ||
+        (t.description || "").toLowerCase().includes(q)
+    );
   }
   if (params.completed !== undefined && params.completed !== "all") {
     const val = String(params.completed) === "true";
@@ -142,6 +155,23 @@ export const getTasks = async (params: GetTasksParams = {}): Promise<TasksRespon
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const slice = tasks.slice((page - 1) * limit, page * limit);
   return { tasks: slice, total, page, totalPages };
+};
+
+export const getAiInsight = async (taskId: string): Promise<AiInsight> => {
+  if (!taskId) throw new Error("Task id is missing.");
+  if (!(await probeBackend())) {
+    throw new Error("AI Insight requires the backend server. Please start it and try again.");
+  }
+
+  const response = await fetch(buildUrl(`/tasks/${taskId}/ai-insight`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getAuthHeader() },
+  });
+  const data = await handleResponse(response);
+  if (!data || !data.success || !data.insight) {
+    throw new Error(data?.message || "AI Insight failed.");
+  }
+  return data.insight as AiInsight;
 };
 
 export const getTaskById = async (id: string): Promise<{ task: Task }> => {
@@ -191,7 +221,8 @@ export const createTask = async (taskData: {
       headers: { "Content-Type": "application/json", ...getAuthHeader() },
       body: JSON.stringify(taskData),
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    return { task: normalizeTask(data.task) };
   }
   // Local fallback: create task in browser localStorage
   const now = new Date().toISOString();
@@ -220,7 +251,8 @@ export const updateTask = async (
       headers: { "Content-Type": "application/json", ...getAuthHeader() },
       body: JSON.stringify(taskData),
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    return { task: normalizeTask(data.task) };
   }
   // Local fallback
   const tasks = readLocal();

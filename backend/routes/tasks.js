@@ -32,7 +32,9 @@ router.get('/', async (req, res) => {
     const search = (req.query.search || '').trim();
     const { completed, priority } = req.query;
 
-    const cacheKey = `tasks_${req.user.id}`;
+    // Cache key must include every query dimension, otherwise a cached
+    // unfiltered page is returned for filtered/searched/paginated requests.
+    const cacheKey = `tasks_${req.user.id}_${page}_${limit}_${search}_${completed || 'all'}_${priority || 'all'}`;
     const cached = cache.get(cacheKey);
     if (cached) {
       console.log('[CACHE HIT]', cacheKey);
@@ -45,7 +47,10 @@ router.get('/', async (req, res) => {
     if (completed !== undefined && completed !== 'all') query.completed = completed === 'true';
     if (priority && priority !== 'all') query.priority = priority;
     if (search) {
-      query.title = { $regex: search, $options: 'i' };
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+      ];
     }
 
     const total = await Task.countDocuments(query);
@@ -93,10 +98,10 @@ router.post('/', async (req, res) => {
       description,
       priority,
     });
-    res.status(201).json({ task });
+    // Invalidate every cached list variant for this user after creation
+    cache.delPrefix(`tasks_${req.user.id}`);
 
-    // Invalidate user's task cache after successful creation
-    cache.del(`tasks_${req.user.id}`);
+    res.status(201).json({ task });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -120,10 +125,11 @@ router.put('/:id', async (req, res) => {
       { new: true }
     );
     if (!task) return res.status(404).json({ message: 'Task not found.' });
-    res.json({ task });
 
-    // Invalidate user's task cache after successful update
-    cache.del(`tasks_${req.user.id}`);
+    // Invalidate every cached list variant for this user after update
+    cache.delPrefix(`tasks_${req.user.id}`);
+
+    res.json({ task });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -139,6 +145,11 @@ router.patch('/:id/complete', async (req, res) => {
       { new: true }
     );
     if (!task) return res.status(404).json({ message: 'Task not found.' });
+
+    // Completion changes must invalidate cached lists too, otherwise the
+    // stale response is served and the toggle appears to have no effect.
+    cache.delPrefix(`tasks_${req.user.id}`);
+
     res.json({ task });
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -151,10 +162,11 @@ router.delete('/:id', async (req, res) => {
     if (!validId(req, res)) return;
     const task = await Task.findOneAndDelete({ _id: req.params.id, ...scopeFor(req) });
     if (!task) return res.status(404).json({ message: 'Task not found.' });
-    res.json({ message: 'Task deleted.' });
 
-    // Invalidate user's task cache after successful deletion
-    cache.del(`tasks_${req.user.id}`);
+    // Invalidate every cached list variant for this user after deletion
+    cache.delPrefix(`tasks_${req.user.id}`);
+
+    res.json({ message: 'Task deleted.' });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
