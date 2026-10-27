@@ -255,7 +255,7 @@ export const achievements: TimelineItem[] = [
     date: "7 August 2026",
     description:
       "Secured Second Runner-Up (3rd Place) in TetraTHON 2026, a high-intensity 36-hour Indo-French AI Innovation Sprint hosted by Navrachana University, Vadodara, in partnership with ISEN Méditerranée, France. Finished among the Top 9 finalist teams out of 160 participating teams, receiving a ₹25,000 team prize. The achievement highlights excellence in AI innovation, technical problem-solving, teamwork, and rapid development under extreme time constraints.",
-    tags: ["🏆 3rd Place", "Top 9 / 160 Teams", "₹25,000 Prize", "36-Hour Sprint", "Navrachana University × ISEN France", "Rudra Prajapati", "Khushi Vadadoriya", "Vipulkumar Patel", "Diya Patel"],
+    tags: ["🏆 3rd Place", "Top 9 / 160 Teams", "₹25,000 Prize", "36-Hour Sprint", "Navrachana University × ISEN France", "Rudra Prajapati", "Khushi Vadadoriya", "Have Patel", "Diya Patel"],
     image: "/Certificates/Tetrathon-2026-2nd-runnerup.jpeg",
   },
 ];

@@ -1,21 +1,20 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { SectionHeading } from '../ui/SectionHeading';
-import { education, experience, certifications, achievements } from '../../constants/portfolioData';
+import { education, experience, achievements } from '../../constants/portfolioData';
 
-type TabKey = 'education' | 'experience' | 'certifications' | 'achievements';
+type TabKey = 'education' | 'experience' | 'achievements';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'education', label: 'Education' },
   { key: 'experience', label: 'Experience' },
-  { key: 'certifications', label: 'Certifications' },
   { key: 'achievements', label: 'Achievements' },
 ];
 
 export const Timeline: React.FC = () => {
   const [tab, setTab] = useState<TabKey>('education');
 
-  const data = tab === 'education' ? education : tab === 'experience' ? experience : tab === 'certifications' ? certifications : achievements;
+  const data = tab === 'education' ? education : tab === 'experience' ? experience : achievements;
 
   return (
     <section
@@ -69,33 +68,47 @@ export const Timeline: React.FC = () => {
                 <span className="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500" />
 
                 <div className="glass rounded-2xl p-5 sm:p-6 glow-card">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-                    <h3
-                      className="text-white text-[16px] sm:text-[18px]"
-                      style={{ fontFamily: 'var(--font-heading)' }}
-                    >
-                      {item.title}
-                    </h3>
-                    <span className="text-[12px] text-white/40 whitespace-nowrap">{item.date}</span>
-                  </div>
-                  {item.subtitle && (
-                    <p className="text-[13px] text-cyan-300/90 mb-2">{item.subtitle}</p>
-                  )}
-                  <p className="text-white/60 text-[13px] sm:text-[14px] leading-relaxed">
-                    {item.description}
-                  </p>
-                  {item.tags && item.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-3">
-                      {item.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="text-[11px] text-white/50 bg-white/5 border border-white/10 rounded-full px-2 py-0.5"
+                  <div className={item.image ? 'md:grid md:grid-cols-[1fr_260px] md:gap-6 md:items-start' : 'flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3'}>
+                    <div className={item.image ? 'min-w-0' : undefined}>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                        <h3
+                          className="text-white text-[16px] sm:text-[18px]"
+                          style={{ fontFamily: 'var(--font-heading)' }}
                         >
-                          {tag}
-                        </span>
-                      ))}
+                          {item.title}
+                        </h3>
+                        <span className="text-[12px] text-white/40 whitespace-nowrap">{item.date}</span>
+                      </div>
+                      {item.subtitle && (
+                        <p className="text-[13px] text-cyan-300/90 mb-2">{item.subtitle}</p>
+                      )}
+                      <p className="text-white/60 text-[13px] sm:text-[14px] leading-relaxed">
+                        {item.description}
+                      </p>
+                      {item.tags && item.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-3">
+                          {item.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="text-[11px] text-white/50 bg-white/5 border border-white/10 rounded-full px-2 py-0.5"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
+                    {item.image && (
+                      <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
+                        <img
+                          src={item.image}
+                          alt={item.title}
+                          className="h-auto max-h-[440px] w-full object-contain"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             ))}
