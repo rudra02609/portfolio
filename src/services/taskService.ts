@@ -157,16 +157,39 @@ export const getTasks = async (params: GetTasksParams = {}): Promise<TasksRespon
   return { tasks: slice, total, page, totalPages };
 };
 
+// Track in-flight AI Insight requests by taskId to prevent duplicates
+const aiInsightControllers = new Map<string, AbortController>();
+
 export const getAiInsight = async (taskId: string): Promise<AiInsight> => {
   if (!taskId) throw new Error("Task id is missing.");
   if (!(await probeBackend())) {
     throw new Error("AI Insight requires the backend server. Please start it and try again.");
   }
 
-  const response = await fetch(buildUrl(`/tasks/${taskId}/ai-insight`), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...getAuthHeader() },
-  });
+  // Abort any in-flight request for the same task to prevent duplicates
+  const existing = aiInsightControllers.get(taskId);
+  if (existing) {
+    existing.abort();
+  }
+  const controller = new AbortController();
+  aiInsightControllers.set(taskId, controller);
+
+  let response: Response;
+  try {
+    response = await fetch(buildUrl(`/tasks/${taskId}/ai-insight`), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getAuthHeader() },
+      signal: controller.signal,
+    });
+
+    // If the request was aborted (duplicate click), throw a specific error
+    if (response.status === 499) {
+      throw new Error("AI Insight request cancelled (duplicate click prevented).");
+    }
+  } finally {
+    aiInsightControllers.delete(taskId);
+  }
+
   const data = await handleResponse(response);
   if (!data || !data.success || !data.insight) {
     throw new Error(data?.message || "AI Insight failed.");

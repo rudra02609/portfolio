@@ -44,6 +44,15 @@ export const TaskManager: React.FC = () => {
   const [aiInsightOpen, setAiInsightOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
 
+  // Lock background scrolling when the AI Insight modal is open
+  useEffect(() => {
+    if (aiInsightOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [aiInsightOpen]);
+
   const loadTasks = useCallback(
     async (p = page) => {
       setLoading(true);
@@ -144,6 +153,7 @@ export const TaskManager: React.FC = () => {
   };
 
   const handleAiInsight = async (taskId: string) => {
+    if (aiLoading) return; // prevent duplicate requests while a request is in progress
     setAiInsight(null);
     setAiInsightOpen(true);
     setAiLoading(true);
@@ -426,7 +436,8 @@ export const TaskManager: React.FC = () => {
         onClick={() => setAiInsightOpen(false)}
       >
         <div
-          className="glass rounded-3xl p-6 sm:p-8 w-full max-w-md max-h-[90vh] overflow-y-auto"
+          className="glass rounded-3xl p-6 sm:p-8 w-full max-w-md overflow-y-auto"
+          style={{ maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto', overscrollBehavior: 'contain', marginTop: 'calc(1rem + 12px)' }}
           onClick={(e) => e.stopPropagation()}
         >
           <h3
