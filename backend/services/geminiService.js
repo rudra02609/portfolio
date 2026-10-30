@@ -45,7 +45,7 @@ async function getAIInsight(taskData) {
     throw err;
   }
 
-  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
 
   const prompt = `
 ${SYSTEM_PROMPT}
@@ -59,35 +59,60 @@ Task information:
 Please provide the AI insight for this task.
 `.trim();
 
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: prompt }],
-            },
-          ],
-          system_instruction: {
-            parts: [
-              { text: SYSTEM_PROMPT.replace(/^You are a Task Completion Assistant\./m, "").trim() },
-            ],
+  const response = await fetch(
+    `${API_BASE_URL}/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }],
           },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error?.message || "Gemini AI insight failed.");
+        ],
+        system_instruction: {
+          parts: [
+            { text: SYSTEM_PROMPT.replace(/^You are a Task Completion Assistant\./m, "").trim() },
+          ],
+        },
+      }),
     }
+  );
 
+  // Handle Gemini API errors - these propagate directly to the route handler
+  // with their actual error messages (e.g., quota exceeded, unauthorized).
+  // Do NOT wrap in outer try/catch so they are not replaced with the generic message.
+  if (!response.ok) {
+    let errData;
+    try {
+      errData = await response.json().catch(() => ({}));
+    } catch (e) {
+      errData = {};
+    }
+    const errorCode = errData.error?.code || errData.error?.status;
+    const retryAfter = response.headers.get("retry-after");
+    const sanitizedMessage = errData.error?.message
+      ? errData.error.message.replace(apiKey, '[REDACTED]')
+      : "Gemini AI insight failed";
+    const baseQuotaMsg = errData.error?.message
+      ? "AI insight quota exceeded. " + errData.error.message.replace(apiKey, '[REDACTED]')
+      : "AI insight quota exceeded.";
+    let finalMessage = baseQuotaMsg;
+    if (retryAfter) {
+      finalMessage += " The system recommends waiting " + retryAfter + " seconds before retrying.";
+    } else {
+      finalMessage += " Please check your Gemini API plan and billing details.";
+    }
+    console.error("[geminiService] Gemini API error - status: " + response.status + ", code: " + errorCode + ", message: " + sanitizedMessage);
+    throw new Error(finalMessage);
+  }
+
+  // Rest of response processing in outer try/catch
+  // Only truly unexpected errors (network, parse) get the generic message.
+  try {
     const data = await response.json();
     const content =
       data.candidates && data.candidates[0]
@@ -161,7 +186,7 @@ async function generateDescription(title) {
     throw err;
   }
 
-  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
 
   const systemPrompt = `
 You are a Task Description Generator. Given a task title, generate a concise, useful paragraph describing how to complete the task.
@@ -185,42 +210,54 @@ Task title: "${title}"
 Please generate a description for this task.
 `.trim();
 
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: prompt }],
-            },
-          ],
-          systemInstruction: {
-            text: systemPrompt.replace(/^You are a Task Description Generator/m, "").trim(),
+  const response = await fetch(
+    `${API_BASE_URL}/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }],
           },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      const errorStatus = errData.error?.code || errData.error?.status || null;
-      const sanitizedMessage = errData.error?.message
-        ? errData.error.message.replace(apiKey, '[REDACTED]').replace(/`/g, '"')
-        : "Gemini AI description failed";
-      console.error("[geminiService] Gemini API error", {
-        errorStatus,
-        sanitizedMessage,
-        model,
-      });
-      throw new Error(sanitizedMessage);
+        ],
+        systemInstruction: {
+          text: systemPrompt.replace(/^You are a Task Description Generator/m, "").trim(),
+        },
+      }),
     }
+  );
 
+  // Handle Gemini API errors - these propagate directly to the route handler
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    const errorStatus = errData.error?.code || errData.error?.status || null;
+    const retryAfter = response.headers.get("retry-after");
+    const sanitizedMessage = errData.error?.message
+      ? errData.error.message.replace(apiKey, '[REDACTED]').replace(/`/g, '"')
+      : "Gemini AI description failed";
+    const baseQuotaMsg = errData.error?.message
+      ? "AI description quota exceeded. " + errData.error.message.replace(apiKey, '[REDACTED]')
+      : "AI description quota exceeded.";
+    let finalMessage = baseQuotaMsg;
+    if (retryAfter) {
+      finalMessage += " The system recommends waiting " + retryAfter + " seconds before retrying.";
+    } else {
+      finalMessage += " Please check your Gemini API plan and billing details.";
+    }
+    console.error("[geminiService] Gemini API error", {
+      errorStatus,
+      sanitizedMessage,
+      model,
+    });
+    throw new Error(finalMessage);
+  }
+
+  // Rest of response processing in outer try/catch
+  try {
     const data = await response.json();
     const content =
       data.candidates && data.candidates[0]

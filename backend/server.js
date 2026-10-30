@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -38,12 +38,26 @@ if (process.env.NODE_ENV !== 'test') {
   connectDB();
 }
 
+// Startup diagnostic — never expose the API key
+const apiKey = process.env.GEMINI_API_KEY || '';
+console.log('[gemini] GEMINI_API_KEY configured:', !!apiKey);
+console.log('[gemini] GEMINI_MODEL:', process.env.GEMINI_MODEL || 'gemini-3.8-flash');
+
 // Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.status || 500).json({ message: err.message || 'Internal Server Error' });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Another process is listening on this port.`);
+    process.exit(1);
+  } else {
+    throw error;
+  }
 });
