@@ -215,7 +215,7 @@ issuer: "CHARUSAT University",
       },
       {
         name: "Foundation of Data Structures & Algorithms",
-        file: "/Certificates/foundation of dsa.pdf",
+        file: "/Certificates/coursera/foundation of dsa.jpg",
         issuer: "Coursera",
         skills: ["Data Structures", "Algorithms", "DSA Fundamentals"],
       },
