@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Local-only diagnostic scripts (machine-specific / require live API keys)
+/test_gemini_api.mjs
+/test_server.ps1
+/backend/test_gemini.js
