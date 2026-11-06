@@ -19,6 +19,15 @@ app.use(express.json());
 // Health check (used by the frontend to detect backend availability)
 app.get('/api/health', (req, res) => res.status(200).json({ status: 'ok' }));
 
+// Root route
+app.get('/', (req, res) =>
+  res.status(200).json({
+    status: 'ok',
+    message: 'Portfolio Backend API is running',
+    health: '/api/health',
+  })
+);
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
